@@ -1,6 +1,6 @@
 BACKEND_DIR = apps/backend
 FRONTEND_DIR = apps/frontend
-VENV = $(BACKEND_DIR)/.venv
+VENV = .venv
 PYTHON = $(VENV)/bin/python
 UVICORN = $(VENV)/bin/uvicorn
 
@@ -9,7 +9,7 @@ UVICORN = $(VENV)/bin/uvicorn
 dev: dev-backend dev-frontend
 
 dev-backend:
-	cd $(BACKEND_DIR) && $(UVICORN) app.main:app --reload --host 0.0.0.0 --port 8000 &
+	cd $(BACKEND_DIR) && $(PYTHON) -m app.main &
 
 dev-frontend:
 	cd $(FRONTEND_DIR) && npm run dev
