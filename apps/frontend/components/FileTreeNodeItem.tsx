@@ -19,12 +19,12 @@ const SKIP_REASON_LABELS: Record<string, string> = {
 export function FileTreeNodeItem({ node, isExpanded, onToggle }: Props) {
   const isDir = node.type === 'directory'
   const isSkipped = node.skipped === true
-  const indent = node.level * 16
+  const indent = node.level * 20
 
   return (
     <div
-      className="flex items-center gap-2 py-0.5 pr-2 rounded-lg group"
-      style={{ paddingLeft: `${indent + 8}px` }}
+      className="flex items-center gap-2.5 py-1 pr-4 rounded-lg group hover:bg-white/[0.03] transition-colors"
+      style={{ paddingLeft: `${indent + 12}px` }}
     >
       {isDir && !isSkipped ? (
         <button
@@ -32,7 +32,7 @@ export function FileTreeNodeItem({ node, isExpanded, onToggle }: Props) {
           className="shrink-0 text-white/30 hover:text-white/60 transition-colors"
           aria-label={isExpanded ? 'Collapse' : 'Expand'}
         >
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+          <svg width="13" height="13" viewBox="0 0 12 12" fill="none">
             <path
               d={isExpanded ? 'M2 4l4 4 4-4' : 'M4 2l4 4-4 4'}
               stroke="currentColor"
@@ -43,12 +43,12 @@ export function FileTreeNodeItem({ node, isExpanded, onToggle }: Props) {
           </svg>
         </button>
       ) : (
-        <span className="shrink-0 w-3" />
+        <span className="shrink-0 w-3.5" />
       )}
 
       <span className={`shrink-0 ${isSkipped ? 'text-white/20' : isDir ? 'text-orange-400/70' : 'text-white/40'}`}>
         {isDir ? (
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <path
               d="M2 5a1.5 1.5 0 0 1 1.5-1.5h3l1 1h5A1.5 1.5 0 0 1 14 6v5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 11V5z"
               stroke="currentColor"
@@ -56,7 +56,7 @@ export function FileTreeNodeItem({ node, isExpanded, onToggle }: Props) {
             />
           </svg>
         ) : (
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <path
               d="M4 2h6l3 3v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"
               stroke="currentColor"
@@ -67,18 +67,18 @@ export function FileTreeNodeItem({ node, isExpanded, onToggle }: Props) {
         )}
       </span>
 
-      <span className={`text-xs font-mono truncate ${isSkipped ? 'text-white/25 line-through' : 'text-white/75'}`}>
+      <span className={`text-sm font-mono truncate ${isSkipped ? 'text-white/25 line-through' : 'text-white/80'}`}>
         {node.name}
       </span>
 
       {isSkipped && node.skipped_reason && (
-        <span className="ml-auto shrink-0 text-[10px] text-white/20 bg-white/5 rounded px-1.5 py-0.5">
+        <span className="ml-auto shrink-0 text-xs text-white/20 bg-white/5 rounded px-2 py-0.5">
           {SKIP_REASON_LABELS[node.skipped_reason] ?? 'skipped'}
         </span>
       )}
 
       {!isSkipped && node.type === 'file' && node.size != null && (
-        <span className="ml-auto shrink-0 text-[10px] text-white/20">
+        <span className="ml-auto shrink-0 text-xs text-white/25">
           {formatSize(node.size)}
         </span>
       )}
