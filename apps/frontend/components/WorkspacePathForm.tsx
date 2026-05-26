@@ -2,6 +2,7 @@
 
 import { useActionState } from 'react'
 import { submitWorkspacePath, WorkspacePathState } from '@/app/actions/workspace-path'
+import { FolderExplorer } from './FolderExplorer'
 
 const initialState: WorkspacePathState = {}
 
@@ -64,15 +65,18 @@ export function WorkspacePathForm() {
       )}
 
       {state.sessionId && (
-        <div className="flex items-start gap-3 rounded-xl border border-orange-500/20 bg-orange-500/[0.06] px-4 py-3">
-          <span className="mt-0.5 shrink-0 text-orange-400">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" />
-              <path d="M5 8l2.5 2.5L11 5.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </span>
-          <p className="text-sm text-orange-400 leading-relaxed">Workspace configured successfully.</p>
-        </div>
+        <>
+          <div className="flex items-start gap-3 rounded-xl border border-orange-500/20 bg-orange-500/[0.06] px-4 py-3">
+            <span className="mt-0.5 shrink-0 text-orange-400">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" />
+                <path d="M5 8l2.5 2.5L11 5.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </span>
+            <p className="text-sm text-orange-400 leading-relaxed">Workspace configured successfully.</p>
+          </div>
+          <FolderExplorer sessionId={state.sessionId} />
+        </>
       )}
     </form>
   )

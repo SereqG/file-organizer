@@ -1,0 +1,93 @@
+import type { FileTreeNode } from '@/lib/types/explore'
+
+interface Props {
+  node: FileTreeNode
+  isExpanded: boolean
+  onToggle: () => void
+}
+
+const SKIP_REASON_LABELS: Record<string, string> = {
+  PERMISSION_DENIED: 'no access',
+  SYMBOLIC_LINK: 'symlink',
+  ARCHIVE_NOT_SUPPORTED: 'archive',
+  DEPTH_LIMIT: 'depth limit',
+  IGNORED_DIRECTORY: 'ignored',
+  IO_ERROR: 'I/O error',
+  UNKNOWN: 'skipped',
+}
+
+export function FileTreeNodeItem({ node, isExpanded, onToggle }: Props) {
+  const isDir = node.type === 'directory'
+  const isSkipped = node.skipped === true
+  const indent = node.level * 16
+
+  return (
+    <div
+      className="flex items-center gap-2 py-0.5 pr-2 rounded-lg group"
+      style={{ paddingLeft: `${indent + 8}px` }}
+    >
+      {isDir && !isSkipped ? (
+        <button
+          onClick={onToggle}
+          className="shrink-0 text-white/30 hover:text-white/60 transition-colors"
+          aria-label={isExpanded ? 'Collapse' : 'Expand'}
+        >
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <path
+              d={isExpanded ? 'M2 4l4 4 4-4' : 'M4 2l4 4-4 4'}
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+      ) : (
+        <span className="shrink-0 w-3" />
+      )}
+
+      <span className={`shrink-0 ${isSkipped ? 'text-white/20' : isDir ? 'text-orange-400/70' : 'text-white/40'}`}>
+        {isDir ? (
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <path
+              d="M2 5a1.5 1.5 0 0 1 1.5-1.5h3l1 1h5A1.5 1.5 0 0 1 14 6v5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 11V5z"
+              stroke="currentColor"
+              strokeWidth="1.2"
+            />
+          </svg>
+        ) : (
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <path
+              d="M4 2h6l3 3v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"
+              stroke="currentColor"
+              strokeWidth="1.2"
+            />
+            <path d="M10 2v3h3" stroke="currentColor" strokeWidth="1.2" />
+          </svg>
+        )}
+      </span>
+
+      <span className={`text-xs font-mono truncate ${isSkipped ? 'text-white/25 line-through' : 'text-white/75'}`}>
+        {node.name}
+      </span>
+
+      {isSkipped && node.skipped_reason && (
+        <span className="ml-auto shrink-0 text-[10px] text-white/20 bg-white/5 rounded px-1.5 py-0.5">
+          {SKIP_REASON_LABELS[node.skipped_reason] ?? 'skipped'}
+        </span>
+      )}
+
+      {!isSkipped && node.type === 'file' && node.size != null && (
+        <span className="ml-auto shrink-0 text-[10px] text-white/20">
+          {formatSize(node.size)}
+        </span>
+      )}
+    </div>
+  )
+}
+
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
