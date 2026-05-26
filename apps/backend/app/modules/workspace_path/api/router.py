@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from app.modules.workspace_path.application.path_validator import validate_path
+from app.modules.workspace_path.application import session_store
 
 router = APIRouter(prefix="/workspace_path/api", tags=["workspace_path"])
 
@@ -35,4 +36,6 @@ def get_path(body: GetPathRequest):
             ).model_dump(),
         )
 
-    return GetPathResponse(session_id=str(uuid.uuid4()))
+    generated_id = str(uuid.uuid4())
+    session_store.store_session(generated_id, canonical_path)
+    return GetPathResponse(session_id=generated_id)
