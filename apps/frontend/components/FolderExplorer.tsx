@@ -99,7 +99,7 @@ export function FolderExplorer({ sessionId }: Props) {
 
   if (state.phase === 'idle' || state.phase === 'loading') {
     return (
-      <div className="mt-6 flex items-center justify-center gap-2 text-sm text-white/30">
+      <div className="mt-8 flex items-center justify-center gap-2.5 text-sm text-white/30">
         <span className="size-4 rounded-full border-2 border-white/10 border-t-orange-400/60 animate-spin" />
         Scanning directory…
       </div>
@@ -108,7 +108,7 @@ export function FolderExplorer({ sessionId }: Props) {
 
   if (state.phase === 'error') {
     return (
-      <div className="mt-6 flex items-start gap-3 rounded-xl border border-red-500/20 bg-red-500/[0.06] px-4 py-3">
+      <div className="mt-8 flex items-start gap-3 rounded-xl border border-red-500/20 bg-red-500/[0.06] px-5 py-4">
         <span className="mt-0.5 shrink-0 text-red-400">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" />
@@ -123,7 +123,7 @@ export function FolderExplorer({ sessionId }: Props) {
   if (state.phase === 'awaiting_confirmation') {
     return (
       <>
-        <div className="mt-6">
+        <div className="mt-8">
           <FileTree root={state.partialTree} />
         </div>
         <DepthConfirmModal
@@ -137,12 +137,12 @@ export function FolderExplorer({ sessionId }: Props) {
   }
 
   return (
-    <div className="mt-6">
-      <p className="mb-2 text-xs text-white/25 font-mono">{state.tree.path}</p>
+    <div className="mt-8">
+      <p className="mb-3 text-xs text-white/30 font-mono">{state.tree.path}</p>
       <FileTree root={state.tree} />
       <button
         className="
-          mt-4 w-full rounded-xl px-4 py-2.5 text-sm font-medium
+          mt-5 w-full rounded-xl px-5 py-3.5 text-sm font-medium
           bg-orange-500/10 border border-orange-500/20 text-orange-400
           hover:bg-orange-500/20 hover:border-orange-500/30
           transition-colors duration-150

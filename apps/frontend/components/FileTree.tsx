@@ -28,7 +28,7 @@ export function FileTree({ root }: Props) {
   }
 
   return (
-    <div className="overflow-auto max-h-96 rounded-xl border border-white/[0.07] bg-white/[0.02] py-2">
+    <div className="overflow-auto max-h-[560px] rounded-xl border border-white/[0.07] bg-white/[0.02] py-3">
       <NodeRenderer node={root} expandedIds={expandedIds} onToggle={toggle} />
     </div>
   )
