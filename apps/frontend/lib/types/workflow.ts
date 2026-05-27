@@ -13,7 +13,7 @@ export type WorkflowNodeType =
   | 'manual_trigger'
   | 'schedule_trigger'
   | 'action'
-  | 'condition'
+  | 'if'
   | 'loop'
   | 'transform';
 
@@ -50,8 +50,111 @@ export interface ScheduleTriggerNode extends BaseTriggerNode {
 
 export type WorkflowTriggerNode = ManualTriggerNode | ScheduleTriggerNode;
 
-// Extend this union as action/condition/loop/transform nodes are added
-export type WorkflowNode = never;
+export interface BaseGeneralNode extends BaseWorkflowNode {
+  category: 'general';
+}
+
+export type LogicalOperator = 'AND' | 'OR';
+
+export type MissingFieldStrategy = 'false' | 'error' | 'skip';
+
+export type ItemType = 'file' | 'folder' | 'symlink';
+
+export type ConditionOperator =
+  | 'equals'
+  | 'contains'
+  | 'starts_with'
+  | 'ends_with'
+  | 'greater_than'
+  | 'less_than'
+  | 'greater_or_equal'
+  | 'less_or_equal'
+  | 'between'
+  | 'before'
+  | 'after'
+  | 'within_last';
+
+export const MAX_GROUP_DEPTH = 10;
+
+export interface ConditionOptions {
+  caseSensitive?: boolean;
+}
+
+export interface Condition {
+  id: string;
+  field: string;
+  operator: ConditionOperator;
+  value: unknown;
+  negate?: boolean;
+  options?: ConditionOptions;
+}
+
+export interface ConditionGroup {
+  id: string;
+  operator: LogicalOperator;
+  negate?: boolean;
+  children: Array<Condition | ConditionGroup>;
+}
+
+export function isConditionGroup(node: Condition | ConditionGroup): node is ConditionGroup {
+  return 'children' in node;
+}
+
+export interface IfNode extends BaseGeneralNode {
+  type: 'if';
+  config: {
+    conditions: ConditionGroup;
+    missingFieldStrategy?: MissingFieldStrategy;
+  };
+  outputs: {
+    true: string;
+    false: string;
+  };
+}
+
+export type WorkflowNode = IfNode;
+
+export interface WorkflowItemStat {
+  size: number;
+  createdAt: string;
+  modifiedAt: string;
+  accessedAt: string;
+}
+
+export interface WorkflowItemFlags {
+  hidden: boolean;
+  executable: boolean;
+  readable: boolean;
+  writable: boolean;
+}
+
+export interface EvaluationFailure {
+  condition: string;
+  expected: unknown;
+  actual: unknown;
+}
+
+export interface EvaluationResult {
+  matched: boolean;
+  matchedConditions: string[];
+  failedConditions: EvaluationFailure[];
+}
+
+export interface WorkflowItem {
+  id: string;
+  path: string;
+  name: string;
+  type: ItemType;
+  extension?: string;
+  mimeType?: string;
+  stat: WorkflowItemStat;
+  flags: WorkflowItemFlags;
+  children?: WorkflowItem[];
+  ai?: Record<string, unknown>;
+  workflow?: {
+    evaluation?: EvaluationResult;
+  };
+}
 
 export interface WorkflowEdge {
   id: string;
