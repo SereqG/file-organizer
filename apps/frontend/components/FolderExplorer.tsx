@@ -7,6 +7,7 @@ import { FileTree } from './FileTree'
 
 interface Props {
   sessionId: string
+  onNextStep: (path: string, tree: FileTreeNode) => void
 }
 
 type ExploreState =
@@ -16,7 +17,7 @@ type ExploreState =
   | { phase: 'complete'; tree: FileTreeNode }
   | { phase: 'error'; message: string }
 
-export function FolderExplorer({ sessionId }: Props) {
+export function FolderExplorer({ sessionId, onNextStep }: Props) {
   const [state, setState] = useState<ExploreState>({ phase: 'idle' })
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const activeJobIdRef = useRef<string | null>(null)
@@ -141,11 +142,12 @@ export function FolderExplorer({ sessionId }: Props) {
       <p className="mb-3 text-xs text-white/30 font-mono">{state.tree.path}</p>
       <FileTree root={state.tree} />
       <button
+        onClick={() => onNextStep(state.tree.path, state.tree)}
         className="
           mt-5 w-full rounded-xl px-5 py-3.5 text-sm font-medium
           bg-orange-500/10 border border-orange-500/20 text-orange-400
           hover:bg-orange-500/20 hover:border-orange-500/30
-          transition-colors duration-150
+          transition-colors duration-150 cursor-pointer
         "
       >
         Next step

@@ -5,6 +5,7 @@ const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:8000'
 export type WorkspacePathState = {
   error?: { code: string; message: string }
   sessionId?: string
+  path?: string
 }
 
 export async function submitWorkspacePath(
@@ -30,5 +31,5 @@ export async function submitWorkspacePath(
     return { error: { code: data.code, message: data.message } }
   }
 
-  return { sessionId: data.session_id }
+  return { sessionId: data.session_id, path }
 }

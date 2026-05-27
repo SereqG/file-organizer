@@ -3,14 +3,24 @@
 import { useActionState } from 'react'
 import { submitWorkspacePath, WorkspacePathState } from '@/app/actions/workspace-path'
 import { FolderExplorer } from './FolderExplorer'
+import { Card } from './Card'
+import { HeaderRow } from './HeaderRow'
 
 const initialState: WorkspacePathState = {}
 
-export function WorkspacePathForm() {
+import type { FileTreeNode } from '@/lib/types/explore'
+
+interface WorkspacePathFormProps {
+  onNextStep: (path: string, tree: FileTreeNode) => void
+}
+
+export function WorkspacePathForm({ onNextStep }: WorkspacePathFormProps) {
   const [state, formAction, pending] = useActionState(submitWorkspacePath, initialState)
 
   return (
-    <form action={formAction} className="flex flex-col gap-5">
+    <Card>
+      <HeaderRow />
+      <form action={formAction} className="flex flex-col gap-5">
       <div className="flex gap-3">
         <input
           type="text"
@@ -74,9 +84,10 @@ export function WorkspacePathForm() {
             </span>
             <p className="text-sm text-orange-400 leading-relaxed">Workspace configured successfully.</p>
           </div>
-          <FolderExplorer sessionId={state.sessionId} />
+          <FolderExplorer sessionId={state.sessionId} onNextStep={onNextStep} />
         </>
       )}
-    </form>
+      </form>
+    </Card>
   )
 }
