@@ -16,10 +16,11 @@ const TRIGGER_LABELS: Record<TriggerId, string> = {
 interface WorkflowControlsProps {
   hasTrigger: boolean
   onNodesChange: OnNodesChange<Node>
+  onTriggerAdded: (triggerId: TriggerId) => void
   dropHandlerRef: React.MutableRefObject<((e: React.DragEvent<HTMLDivElement>) => void) | null>
 }
 
-export function WorkflowControls({ hasTrigger, onNodesChange, dropHandlerRef }: WorkflowControlsProps) {
+export function WorkflowControls({ hasTrigger, onNodesChange, onTriggerAdded, dropHandlerRef }: WorkflowControlsProps) {
   const { screenToFlowPosition } = useReactFlow()
   const [modalOpen, setModalOpen] = useState(false)
 
@@ -34,7 +35,8 @@ export function WorkflowControls({ hasTrigger, onNodesChange, dropHandlerRef }: 
       data: { label, triggerId },
     }
     onNodesChange([{ type: 'add', item: newNode }])
-  }, [hasTrigger, screenToFlowPosition, onNodesChange])
+    onTriggerAdded(triggerId)
+  }, [hasTrigger, screenToFlowPosition, onNodesChange, onTriggerAdded])
 
   useEffect(() => {
     dropHandlerRef.current = (event: React.DragEvent<HTMLDivElement>) => {

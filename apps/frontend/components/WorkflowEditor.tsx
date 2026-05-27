@@ -1,10 +1,12 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { ReactFlow, Background, BackgroundVariant, useNodesState } from '@xyflow/react'
 import type { Node } from '@xyflow/react'
 import type { FileTreeNode } from '@/lib/types/explore'
+import type { TriggerId } from './TriggerSelectModal'
+import { useWorkflowDefinition } from '@/hooks/useWorkflowDefinition'
 import { WorkspaceIndicator } from './WorkspaceIndicator'
 import { ViewportControls } from './ViewportControls'
 import { TriggerNode } from './TriggerNode'
@@ -24,6 +26,17 @@ export function WorkflowEditor({ workspacePath, workspaceTree }: WorkflowEditorP
   const dropHandlerRef = useRef<((e: React.DragEvent<HTMLDivElement>) => void) | null>(null)
   const hasTrigger = nodes.some((n) => n.type === 'trigger')
 
+  const { definition, addTrigger, removeTrigger } = useWorkflowDefinition()
+
+  const handleTriggerAdded = useCallback((triggerId: TriggerId) => {
+    addTrigger(triggerId)
+  }, [addTrigger])
+
+  const handleNodesDelete = useCallback((deleted: Node[]) => {
+    const triggerRemoved = deleted.some((n) => n.type === 'trigger')
+    if (triggerRemoved) removeTrigger()
+  }, [removeTrigger])
+
   useEffect(() => {
     setMounted(true)
   }, [])
@@ -39,6 +52,7 @@ export function WorkflowEditor({ workspacePath, workspaceTree }: WorkflowEditorP
         edges={[]}
         nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
+        onNodesDelete={handleNodesDelete}
         nodeOrigin={[0.5, 0.5]}
         nodesDraggable
         nodesConnectable={true}
@@ -54,7 +68,12 @@ export function WorkflowEditor({ workspacePath, workspaceTree }: WorkflowEditorP
           bgColor="#080808"
         />
         <ViewportControls />
-        <WorkflowControls hasTrigger={hasTrigger} onNodesChange={onNodesChange} dropHandlerRef={dropHandlerRef} />
+        <WorkflowControls
+          hasTrigger={hasTrigger}
+          onNodesChange={onNodesChange}
+          onTriggerAdded={handleTriggerAdded}
+          dropHandlerRef={dropHandlerRef}
+        />
       </ReactFlow>
 
       <div
