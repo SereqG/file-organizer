@@ -1,0 +1,105 @@
+'use client'
+
+import { useState, useCallback } from 'react'
+import type { Connection } from '@xyflow/react'
+import type { IfNode, WorkflowDefinition, WorkflowEdge, WorkflowTriggerNode } from '@/lib/types/workflow'
+import type { TriggerId } from '@/components/TriggerSelectModal'
+
+const WORKFLOW_VERSION = '1.0'
+
+function buildTriggerNode(triggerId: TriggerId): WorkflowTriggerNode {
+  if (triggerId === 'manual') {
+    return {
+      id: 'trigger',
+      type: 'manual_trigger',
+      category: 'trigger',
+      name: 'Manual Trigger',
+      version: 1,
+      config: {},
+    }
+  }
+
+  return {
+    id: 'trigger',
+    type: 'schedule_trigger',
+    category: 'trigger',
+    name: 'Schedule',
+    version: 1,
+    config: { cron: '', timezone: 'UTC', enabled: false },
+  }
+}
+
+function buildIfNode(id: string, label: string): IfNode {
+  return {
+    id,
+    type: 'if',
+    category: 'general',
+    name: label,
+    version: 1,
+    config: {
+      conditions: { id: `${id}-root`, operator: 'AND', children: [] },
+    },
+    outputs: { true: '', false: '' },
+  }
+}
+
+export function useWorkflowDefinition() {
+  const [definition, setDefinition] = useState<WorkflowDefinition | null>(null)
+
+  const addTrigger = useCallback((triggerId: TriggerId) => {
+    const trigger = buildTriggerNode(triggerId)
+    setDefinition({ version: WORKFLOW_VERSION, trigger, nodes: [], edges: [] })
+  }, [])
+
+  const removeTrigger = useCallback(() => {
+    setDefinition(null)
+  }, [])
+
+  const addGeneralNode = useCallback((id: string, nodeType: string, label: string) => {
+    setDefinition((prev) => {
+      if (!prev) return prev
+      if (nodeType !== 'if') return prev
+      return { ...prev, nodes: [...prev.nodes, buildIfNode(id, label)] }
+    })
+  }, [])
+
+  const removeNode = useCallback((id: string) => {
+    setDefinition((prev) => {
+      if (!prev) return prev
+      return { ...prev, nodes: prev.nodes.filter((n) => n.id !== id) }
+    })
+  }, [])
+
+  const updateIfNodeConfig = useCallback((id: string, config: IfNode['config']) => {
+    setDefinition((prev) => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        nodes: prev.nodes.map((n) => (n.id === id && n.type === 'if' ? { ...n, config } : n)),
+      }
+    })
+  }, [])
+
+  const addWorkflowEdge = useCallback((connection: Connection) => {
+    setDefinition((prev) => {
+      if (!prev) return prev
+      const edge: WorkflowEdge = {
+        id: `${connection.source}-${connection.sourceHandle ?? 'default'}->${connection.target}`,
+        source: connection.source,
+        target: connection.target,
+        sourceHandle: connection.sourceHandle ?? undefined,
+        targetHandle: connection.targetHandle ?? undefined,
+      }
+      return { ...prev, edges: [...prev.edges, edge] }
+    })
+  }, [])
+
+  const removeWorkflowEdge = useCallback((id: string) => {
+    setDefinition((prev) => {
+      if (!prev) return prev
+      return { ...prev, edges: prev.edges.filter((e) => e.id !== id) }
+    })
+  }, [])
+
+  return { definition, addTrigger, removeTrigger, addGeneralNode, removeNode, updateIfNodeConfig, addWorkflowEdge, removeWorkflowEdge }
+}
