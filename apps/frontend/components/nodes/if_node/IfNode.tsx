@@ -4,7 +4,7 @@ import { useCallback } from 'react'
 import { Handle, Position, useReactFlow } from '@xyflow/react'
 import type { NodeProps } from '@xyflow/react'
 import type { ConditionGroup, IfNode as IfNodeType } from '@/lib/types/workflow'
-import { useIfNodeConfig } from '@/lib/contexts/IfNodeConfigContext'
+import { useNodeConfig } from '@/lib/contexts/NodeConfigContext'
 import { TrashIcon } from '../shared/TrashIcon'
 import { BranchIcon } from './BranchIcon'
 
@@ -25,7 +25,7 @@ function countConditions(group: ConditionGroup): number {
 export function IfNode({ id, data }: NodeProps) {
   const nodeData = data as unknown as IfNodeData
   const { deleteElements } = useReactFlow()
-  const { openConfig } = useIfNodeConfig()
+  const { openIfNodeConfig } = useNodeConfig()
 
   const handleDelete = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
@@ -33,8 +33,8 @@ export function IfNode({ id, data }: NodeProps) {
   }, [id, deleteElements])
 
   const handleOpen = useCallback(() => {
-    openConfig(id)
-  }, [id, openConfig])
+    openIfNodeConfig(id)
+  }, [id, openIfNodeConfig])
 
   const conditionCount = nodeData.config ? countConditions(nodeData.config.conditions) : 0
   const configured = conditionCount > 0

@@ -62,12 +62,9 @@ export function useWorkflowEditor() {
     }
   }, [removeWorkflowEdge])
 
-  const ifNodeConfigValue = useMemo(() => ({
-    openConfig: (id: string) => setEditingIfNodeId(id),
-  }), [])
-
-  const createFolderNodeConfigValue = useMemo(() => ({
-    openConfig: (id: string) => setEditingCreateFolderNodeId(id),
+  const nodeConfigValue = useMemo(() => ({
+    openIfNodeConfig: (id: string) => setEditingIfNodeId(id),
+    openCreateFolderNodeConfig: (id: string) => setEditingCreateFolderNodeId(id),
   }), [])
 
   const handleIfConfigSave = useCallback((config: IfNodeType['config']) => {
@@ -99,8 +96,7 @@ export function useWorkflowEditor() {
     hasTrigger,
     editingIfNodeId,
     editingCreateFolderNodeId,
-    ifNodeConfigValue,
-    createFolderNodeConfigValue,
+    nodeConfigValue,
     onNodesChange,
     onEdgesChange,
     handleTriggerAdded,

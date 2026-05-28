@@ -4,8 +4,7 @@ import { createPortal } from 'react-dom'
 import { ReactFlow, Background, BackgroundVariant } from '@xyflow/react'
 import type { FileTreeNode } from '@/lib/types/explore'
 import { useWorkflowEditor } from '@/hooks/useWorkflowEditor'
-import { IfNodeConfigContext } from '@/lib/contexts/IfNodeConfigContext'
-import { CreateFolderNodeConfigContext } from '@/lib/contexts/CreateFolderNodeConfigContext'
+import { NodeConfigContext } from '@/lib/contexts/NodeConfigContext'
 import { WorkspaceIndicator } from './WorkspaceIndicator'
 import { ViewportControls } from './ViewportControls'
 import { IfConfigModal } from './nodes/if_node/IfConfigModal'
@@ -27,8 +26,7 @@ export function WorkflowEditor({ workspacePath, workspaceTree }: WorkflowEditorP
     hasTrigger,
     editingIfNodeId,
     editingCreateFolderNodeId,
-    ifNodeConfigValue,
-    createFolderNodeConfigValue,
+    nodeConfigValue,
     onNodesChange,
     onEdgesChange,
     handleTriggerAdded,
@@ -45,8 +43,7 @@ export function WorkflowEditor({ workspacePath, workspaceTree }: WorkflowEditorP
   if (!mounted) return null
 
   return createPortal(
-    <IfNodeConfigContext.Provider value={ifNodeConfigValue}>
-      <CreateFolderNodeConfigContext.Provider value={createFolderNodeConfigValue}>
+    <NodeConfigContext.Provider value={nodeConfigValue}>
         <div className="fixed inset-0">
           <WorkspaceIndicator path={workspacePath} tree={workspaceTree} />
           <ReactFlow
@@ -112,8 +109,7 @@ export function WorkflowEditor({ workspacePath, workspaceTree }: WorkflowEditorP
             }}
           />
         </div>
-      </CreateFolderNodeConfigContext.Provider>
-    </IfNodeConfigContext.Provider>,
+    </NodeConfigContext.Provider>,
     document.body
   )
 }

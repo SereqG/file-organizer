@@ -4,7 +4,7 @@ import { useCallback } from 'react'
 import { Handle, Position, useReactFlow } from '@xyflow/react'
 import type { NodeProps } from '@xyflow/react'
 import type { CreateFolderNode as CreateFolderNodeType } from '@/lib/types/workflow'
-import { useCreateFolderNodeConfig } from '@/lib/contexts/CreateFolderNodeConfigContext'
+import { useNodeConfig } from '@/lib/contexts/NodeConfigContext'
 import { TrashIcon } from '../shared/TrashIcon'
 import { FolderPlusIcon } from './FolderPlusIcon'
 
@@ -16,7 +16,7 @@ export interface CreateFolderNodeData {
 export function CreateFolderNode({ id, data }: NodeProps) {
   const nodeData = data as unknown as CreateFolderNodeData
   const { deleteElements } = useReactFlow()
-  const { openConfig } = useCreateFolderNodeConfig()
+  const { openCreateFolderNodeConfig } = useNodeConfig()
 
   const handleDelete = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
@@ -24,8 +24,8 @@ export function CreateFolderNode({ id, data }: NodeProps) {
   }, [id, deleteElements])
 
   const handleOpen = useCallback(() => {
-    openConfig(id)
-  }, [id, openConfig])
+    openCreateFolderNodeConfig(id)
+  }, [id, openCreateFolderNodeConfig])
 
   const configured = !!(nodeData.config?.folderName && nodeData.config?.parentFolderId)
 
