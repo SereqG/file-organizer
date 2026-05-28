@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import type { NodeDescriptor, NodeKind } from '@/lib/types/workflowNodeDescriptor'
+import { ChevronIcon } from './ChevronIcon'
 
 interface NodeEntry {
   kind: NodeKind
@@ -72,22 +73,23 @@ const CATEGORIES: NodeCategory[] = [
       },
     ],
   },
+  {
+    name: 'Create',
+    nodes: [
+      {
+        kind: 'create',
+        nodeType: 'createFolder',
+        label: 'Create Folder',
+        icon: (
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M1.5 3.5C1.5 3.5 3 3.5 4 3.5L5.5 2H12.5V10.5H1.5V3.5Z" stroke="currentColor" strokeWidth="1.25" strokeLinejoin="round" />
+            <path d="M7 5.5V8.5M5.5 7H8.5" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
+          </svg>
+        ),
+      },
+    ],
+  },
 ]
-
-function ChevronIcon({ open }: { open: boolean }) {
-  return (
-    <svg
-      width="12"
-      height="12"
-      viewBox="0 0 12 12"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={`transition-transform duration-200 ${open ? 'rotate-90' : ''}`}
-    >
-      <path d="M4.5 3L7.5 6L4.5 9" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
 
 interface NodeItemProps extends NodeEntry {
   disabled?: boolean

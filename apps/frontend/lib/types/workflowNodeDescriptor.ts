@@ -1,4 +1,4 @@
-export type NodeKind = 'trigger' | 'general'
+export type NodeKind = 'trigger' | 'general' | 'create'
 
 export interface NodeDescriptor {
   kind: NodeKind

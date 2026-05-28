@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import type { Node, OnNodesChange } from '@xyflow/react'
-import { NodesSidebar } from './NodesSidebar'
+import { NodesSidebar } from './nodes/nodes_sidebar/NodesSidebar'
 import { AddTriggerButton } from './AddTriggerButton'
 import { TriggerSelectModal } from './TriggerSelectModal'
 import type { TriggerId } from './TriggerSelectModal'
@@ -45,15 +45,10 @@ export function WorkflowControls({ hasTrigger, onNodesChange, onTriggerAdded, on
     }
 
     const id = `${entry.nodeType}-${Date.now()}`
-    const newNode: Node = {
-      id,
-      type: entry.nodeType,
-      position,
-      data: {
-        label: entry.label,
-        config: { conditions: { id: `group-${Date.now()}`, operator: 'AND', children: [] } },
-      },
-    }
+    const data = entry.nodeType === 'if'
+      ? { label: entry.label, config: { conditions: { id: `group-${Date.now()}`, operator: 'AND', children: [] } } }
+      : { label: entry.label }
+    const newNode: Node = { id, type: entry.nodeType, position, data }
     onNodesChange([{ type: 'add', item: newNode }])
     onGeneralNodeAdded(id, entry.nodeType, entry.label)
   }, [hasTrigger, screenToFlowPosition, onNodesChange, onTriggerAdded, onGeneralNodeAdded])

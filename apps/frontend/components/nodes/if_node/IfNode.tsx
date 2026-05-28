@@ -5,6 +5,8 @@ import { Handle, Position, useReactFlow } from '@xyflow/react'
 import type { NodeProps } from '@xyflow/react'
 import type { ConditionGroup, IfNode as IfNodeType } from '@/lib/types/workflow'
 import { useIfNodeConfig } from '@/lib/contexts/IfNodeConfigContext'
+import { TrashIcon } from '../shared/TrashIcon'
+import { BranchIcon } from './BranchIcon'
 
 export interface IfNodeData {
   label: string
@@ -18,23 +20,6 @@ function countConditions(group: ConditionGroup): number {
     else count += 1
   }
   return count
-}
-
-function BranchIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M4 3V8L9 11V15" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M14 3V8L9 11" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
-
-function TrashIcon() {
-  return (
-    <svg width="10" height="10" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M1.5 3h9M4.5 3V2h3v1M5 5.5v3M7 5.5v3M2.5 3l.5 7h6l.5-7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
 }
 
 export function IfNode({ id, data }: NodeProps) {
