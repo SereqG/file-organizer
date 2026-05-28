@@ -1,5 +1,6 @@
 'use client'
 
+import { memo, useCallback, useRef } from 'react'
 import {
   MAX_GROUP_DEPTH,
   isConditionGroup,
@@ -9,13 +10,11 @@ import {
 } from '@/lib/types/workflow'
 import { nextId } from '@/lib/workflow/utils/nextId'
 import { ConditionRow } from './ConditionRow'
-import type { ValidationError } from '@/lib/workflow/validation/validateIfConfig'
-
 interface ConditionGroupEditorProps {
   group: ConditionGroup
   path: string
   depth: number
-  errors: ValidationError[]
+  errors: Record<string, string>
   onChange: (next: ConditionGroup) => void
   onRemove?: () => void
 }
@@ -28,32 +27,58 @@ function emptyGroup(): ConditionGroup {
   return { id: nextId('group'), operator: 'AND', children: [] }
 }
 
-export function ConditionGroupEditor({ group, path, depth, errors, onChange, onRemove }: ConditionGroupEditorProps) {
-  const directErrors = errors.filter((e) => e.path === path)
+function arePropsEqual(prev: ConditionGroupEditorProps, next: ConditionGroupEditorProps): boolean {
+  if (prev.group !== next.group || prev.path !== next.path || prev.depth !== next.depth) return false
+  const prevKeys = Object.keys(prev.errors).filter(p => p.startsWith(prev.path))
+  const nextKeys = Object.keys(next.errors).filter(p => p.startsWith(next.path))
+  return prevKeys.length === nextKeys.length && prevKeys.every(k => prev.errors[k] === next.errors[k])
+}
+
+export const ConditionGroupEditor = memo(function ConditionGroupEditor({ group, path, depth, errors, onChange, onRemove }: ConditionGroupEditorProps) {
+  const groupRef = useRef(group)
+  groupRef.current = group
+  const onChangeRef = useRef(onChange)
+  onChangeRef.current = onChange
+  const onRemoveRef = useRef(onRemove)
+  onRemoveRef.current = onRemove
+
+  const directErrors = Object.entries(errors).filter(([p]) => p === path).map(([, message]) => ({ message }))
   const canNestDeeper = depth < MAX_GROUP_DEPTH - 1
 
-  const updateChild = (index: number, next: Condition | ConditionGroup) => {
-    const children = group.children.slice()
+  const updateChild = useCallback((index: number, next: Condition | ConditionGroup) => {
+    const g = groupRef.current
+    const children = g.children.slice()
     children[index] = next
-    onChange({ ...group, children })
-  }
+    onChangeRef.current({ ...g, children })
+  }, [])
 
-  const removeChild = (index: number) => {
-    const children = group.children.slice()
+  const removeChild = useCallback((index: number) => {
+    const g = groupRef.current
+    const children = g.children.slice()
     children.splice(index, 1)
-    onChange({ ...group, children })
-  }
+    onChangeRef.current({ ...g, children })
+  }, [])
 
-  const addCondition = () => {
-    onChange({ ...group, children: [...group.children, emptyCondition()] })
-  }
+  const addCondition = useCallback(() => {
+    const g = groupRef.current
+    onChangeRef.current({ ...g, children: [...g.children, emptyCondition()] })
+  }, [])
 
-  const addGroup = () => {
-    onChange({ ...group, children: [...group.children, emptyGroup()] })
-  }
+  const addGroup = useCallback(() => {
+    const g = groupRef.current
+    onChangeRef.current({ ...g, children: [...g.children, emptyGroup()] })
+  }, [])
 
-  const setOperator = (op: LogicalOperator) => onChange({ ...group, operator: op })
-  const toggleNegate = () => onChange({ ...group, negate: !group.negate })
+  const setOperator = useCallback((op: LogicalOperator) => {
+    onChangeRef.current({ ...groupRef.current, operator: op })
+  }, [])
+
+  const toggleNegate = useCallback(() => {
+    const g = groupRef.current
+    onChangeRef.current({ ...g, negate: !g.negate })
+  }, [])
+
+  const handleRemove = useCallback(() => onRemoveRef.current?.(), [])
 
   return (
     <div className="flex flex-col gap-2 rounded-md border border-white/15 bg-[#101010] p-2.5">
@@ -88,7 +113,7 @@ export function ConditionGroupEditor({ group, path, depth, errors, onChange, onR
 
         {onRemove && (
           <button
-            onClick={onRemove}
+            onClick={handleRemove}
             className="ml-auto text-white/40 hover:text-rose-400 text-xs"
             aria-label="Remove group"
           >
@@ -150,4 +175,4 @@ export function ConditionGroupEditor({ group, path, depth, errors, onChange, onR
       )}
     </div>
   )
-}
+}, arePropsEqual)

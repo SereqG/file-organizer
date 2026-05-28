@@ -1,5 +1,7 @@
 'use client'
 
+import { Modal } from '@/components/shared/Modal'
+
 export type TriggerId = 'manual' | 'schedule'
 
 interface TriggerOption {
@@ -41,10 +43,7 @@ interface TriggerSelectModalProps {
 
 export function TriggerSelectModal({ onSelect, onClose }: TriggerSelectModalProps) {
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
-    >
+    <Modal onClose={onClose} ariaLabel="Select trigger">
       <div className="w-80 rounded-xl border border-white/10 bg-[#111] shadow-2xl overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
           <span className="text-sm font-medium text-white/80">Select trigger</span>
@@ -77,6 +76,6 @@ export function TriggerSelectModal({ onSelect, onClose }: TriggerSelectModalProp
           ))}
         </div>
       </div>
-    </div>
+    </Modal>
   )
 }

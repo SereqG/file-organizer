@@ -14,6 +14,7 @@ export type WorkflowNodeType =
   | 'schedule_trigger'
   | 'action'
   | 'if'
+  | 'createFolder'
   | 'loop'
   | 'transform';
 
@@ -112,7 +113,18 @@ export interface IfNode extends BaseGeneralNode {
   };
 }
 
-export type WorkflowNode = IfNode;
+export type IfExists = 'reuse_existing' | 'rename_incrementally' | 'overwrite' | 'fail'
+
+export interface CreateFolderNode extends BaseGeneralNode {
+  type: 'createFolder';
+  config: {
+    folderName: string;
+    parentFolderId: string;
+    ifExists: IfExists;
+  };
+}
+
+export type WorkflowNode = IfNode | CreateFolderNode;
 
 export interface WorkflowItemStat {
   size: number;

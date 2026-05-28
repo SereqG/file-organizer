@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import type { Connection } from '@xyflow/react'
-import type { IfNode, WorkflowDefinition, WorkflowEdge, WorkflowTriggerNode } from '@/lib/types/workflow'
+import type { CreateFolderNode, IfNode, WorkflowDefinition, WorkflowEdge, WorkflowTriggerNode } from '@/lib/types/workflow'
 import type { TriggerId } from '@/components/TriggerSelectModal'
 
 const WORKFLOW_VERSION = '1.0'
@@ -43,6 +43,21 @@ function buildIfNode(id: string, label: string): IfNode {
   }
 }
 
+function buildCreateFolderNode(id: string, label: string): CreateFolderNode {
+  return {
+    id,
+    type: 'createFolder',
+    category: 'general',
+    name: label,
+    version: 1,
+    config: {
+      folderName: '',
+      parentFolderId: '',
+      ifExists: 'reuse_existing',
+    },
+  }
+}
+
 export function useWorkflowDefinition() {
   const [definition, setDefinition] = useState<WorkflowDefinition | null>(null)
 
@@ -58,8 +73,9 @@ export function useWorkflowDefinition() {
   const addGeneralNode = useCallback((id: string, nodeType: string, label: string) => {
     setDefinition((prev) => {
       if (!prev) return prev
-      if (nodeType !== 'if') return prev
-      return { ...prev, nodes: [...prev.nodes, buildIfNode(id, label)] }
+      if (nodeType === 'if') return { ...prev, nodes: [...prev.nodes, buildIfNode(id, label)] }
+      if (nodeType === 'createFolder') return { ...prev, nodes: [...prev.nodes, buildCreateFolderNode(id, label)] }
+      return prev
     })
   }, [])
 
@@ -76,6 +92,16 @@ export function useWorkflowDefinition() {
       return {
         ...prev,
         nodes: prev.nodes.map((n) => (n.id === id && n.type === 'if' ? { ...n, config } : n)),
+      }
+    })
+  }, [])
+
+  const updateCreateFolderNodeConfig = useCallback((id: string, config: CreateFolderNode['config']) => {
+    setDefinition((prev) => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        nodes: prev.nodes.map((n) => (n.id === id && n.type === 'createFolder' ? { ...n, config } : n)),
       }
     })
   }, [])
@@ -101,5 +127,15 @@ export function useWorkflowDefinition() {
     })
   }, [])
 
-  return { definition, addTrigger, removeTrigger, addGeneralNode, removeNode, updateIfNodeConfig, addWorkflowEdge, removeWorkflowEdge }
+  return {
+    definition,
+    addTrigger,
+    removeTrigger,
+    addGeneralNode,
+    removeNode,
+    updateIfNodeConfig,
+    updateCreateFolderNodeConfig,
+    addWorkflowEdge,
+    removeWorkflowEdge,
+  }
 }

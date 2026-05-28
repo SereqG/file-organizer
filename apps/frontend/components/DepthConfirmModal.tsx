@@ -1,3 +1,5 @@
+import { Modal } from '@/components/shared/Modal'
+
 interface Props {
   detectedDepth: number
   directoryName: string
@@ -7,11 +9,9 @@ interface Props {
 
 export function DepthConfirmModal({ detectedDepth, directoryName, onConfirm, onCancel }: Props) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onCancel} />
-
+    <Modal onClose={onCancel} ariaLabel="Deep nesting detected">
       <div
-        className="relative z-10 w-full max-w-sm rounded-2xl p-6 border border-white/[0.08]"
+        className="w-full max-w-sm mx-4 rounded-2xl p-6 border border-white/[0.08]"
         style={{ background: 'rgba(12, 12, 12, 0.95)', backdropFilter: 'blur(24px)' }}
       >
         <div className="mb-4 flex items-center justify-center">
@@ -55,6 +55,6 @@ export function DepthConfirmModal({ detectedDepth, directoryName, onConfirm, onC
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   )
 }

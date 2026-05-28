@@ -25,10 +25,10 @@ export async function submitWorkspacePath(
     return { error: { code: 'NETWORK_ERROR', message: 'Could not reach the server. Make sure the backend is running.' } }
   }
 
-  const data = await response.json()
+  const data = await response.json().catch(() => ({}))
 
   if (!response.ok) {
-    return { error: { code: data.code, message: data.message } }
+    return { error: { code: data.code ?? 'UNKNOWN', message: data.message ?? 'Unexpected error' } }
   }
 
   return { sessionId: data.session_id, path }

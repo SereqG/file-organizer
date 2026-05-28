@@ -86,8 +86,11 @@ async function walkCondition(
 
   if (!lookup.found) {
     if (strategy === 'error') throw new MissingFieldError(condition.field)
-    const baseMatched = strategy === 'skip' ? false : false
-    const final = condition.negate ? !baseMatched : baseMatched
+    if (strategy === 'skip') {
+      matched.push(`${label} (skipped — missing field)`)
+      return false
+    }
+    const final = condition.negate ? true : false
     if (final) matched.push(label)
     else failed.push({ condition: label, expected: condition.value, actual: '(missing)' })
     return final

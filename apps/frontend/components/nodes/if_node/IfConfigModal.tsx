@@ -7,6 +7,9 @@ import { nextId } from '@/lib/workflow/utils/nextId'
 import { validateIfConfig } from '@/lib/workflow/validation/validateIfConfig'
 import { ConditionGroupEditor } from './ConditionBuilder/ConditionGroupEditor'
 import { EvaluationPreview } from './ConditionBuilder/EvaluationPreview'
+import { ErrorBoundary } from '@/components/shared/ErrorBoundary'
+import { ConfigErrorPanel } from '@/components/shared/ConfigErrorPanel'
+import { Modal } from '@/components/shared/Modal'
 
 interface IfConfigModalProps {
   nodeId: string
@@ -44,10 +47,7 @@ export function IfConfigModal({ nodeId, onClose, onSave }: IfConfigModalProps) {
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
-    >
+    <Modal onClose={onClose} ariaLabel="Configure If">
       <div className="w-[640px] max-h-[85vh] flex flex-col rounded-xl border border-white/10 bg-[#111] shadow-2xl overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
           <span className="text-sm font-medium text-white/80">Configure If</span>
@@ -62,36 +62,38 @@ export function IfConfigModal({ nodeId, onClose, onSave }: IfConfigModalProps) {
           </button>
         </div>
 
-        <div className="flex-1 overflow-auto p-4">
-          <ConditionGroupEditor
-            group={conditions}
-            path="conditions"
-            depth={0}
-            errors={validation.errors}
-            onChange={setConditions}
-          />
+        <ErrorBoundary fallback={(error) => <ConfigErrorPanel error={error} onClose={onClose} />}>
+          <div className="flex-1 overflow-auto p-4">
+            <ConditionGroupEditor
+              group={conditions}
+              path="conditions"
+              depth={0}
+              errors={validation.fieldErrors}
+              onChange={setConditions}
+            />
 
-          <div className="mt-4 flex items-center gap-2 text-xs text-white/60">
-            <label htmlFor="missing-strategy">When a field is missing:</label>
-            <select
-              id="missing-strategy"
-              value={strategy}
-              onChange={(e) => setStrategy(e.target.value as MissingFieldStrategy)}
-              className="rounded-md border border-white/10 bg-[#181818] px-2 py-1 text-xs text-white/80 focus:border-orange-500/60 focus:outline-none"
-            >
-              {(Object.keys(STRATEGY_LABELS) as MissingFieldStrategy[]).map((s) => (
-                <option key={s} value={s}>{STRATEGY_LABELS[s]}</option>
-              ))}
-            </select>
+            <div className="mt-4 flex items-center gap-2 text-xs text-white/60">
+              <label htmlFor="missing-strategy">When a field is missing:</label>
+              <select
+                id="missing-strategy"
+                value={strategy}
+                onChange={(e) => setStrategy(e.target.value as MissingFieldStrategy)}
+                className="rounded-md border border-white/10 bg-[#181818] px-2 py-1 text-xs text-white/80 focus:border-orange-500/60 focus:outline-none"
+              >
+                {(Object.keys(STRATEGY_LABELS) as MissingFieldStrategy[]).map((s) => (
+                  <option key={s} value={s}>{STRATEGY_LABELS[s]}</option>
+                ))}
+              </select>
+            </div>
+
+            <EvaluationPreview conditions={conditions} strategy={strategy} />
           </div>
-
-          <EvaluationPreview conditions={conditions} strategy={strategy} />
-        </div>
+        </ErrorBoundary>
 
         <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-white/10">
           {!validation.valid && (
             <span className="mr-auto text-[11px] text-rose-400/80">
-              {validation.errors.length} validation {validation.errors.length === 1 ? 'error' : 'errors'}
+              {Object.keys(validation.fieldErrors).length + validation.formErrors.length} validation {Object.keys(validation.fieldErrors).length + validation.formErrors.length === 1 ? 'error' : 'errors'}
             </span>
           )}
           <button
@@ -109,6 +111,6 @@ export function IfConfigModal({ nodeId, onClose, onSave }: IfConfigModalProps) {
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   )
 }

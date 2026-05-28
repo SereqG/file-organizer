@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import type { ConditionGroup, MissingFieldStrategy, WorkflowItem } from '@/lib/types/workflow'
 import { evaluateWithTrace, type TraceResult } from '@/lib/workflow/evaluator/explain'
+import { validateWorkflowItem } from '@/lib/workflow/validateWorkflowItem'
 
 interface EvaluationPreviewProps {
   conditions: ConditionGroup
@@ -33,17 +34,25 @@ export function EvaluationPreview({ conditions, strategy }: EvaluationPreviewPro
   const [result, setResult] = useState<TraceResult | null>(null)
 
   const run = async () => {
-    let item: WorkflowItem
+    let parsed: unknown
     try {
-      item = JSON.parse(json) as WorkflowItem
-      setParseError(null)
+      parsed = JSON.parse(json)
     } catch (err) {
       setParseError(err instanceof Error ? err.message : 'Invalid JSON')
       setResult(null)
       return
     }
+
+    const validated = validateWorkflowItem(parsed)
+    if (!validated.ok) {
+      setParseError(`Invalid WorkflowItem: ${validated.error}`)
+      setResult(null)
+      return
+    }
+
+    setParseError(null)
     try {
-      const trace = await evaluateWithTrace(item, conditions, { missingFieldStrategy: strategy })
+      const trace = await evaluateWithTrace(validated.item, conditions, { missingFieldStrategy: strategy })
       setResult(trace)
     } catch (err) {
       setParseError(err instanceof Error ? err.message : 'Evaluation failed')
@@ -105,7 +114,7 @@ function PreviewResult({ result }: { result: TraceResult }) {
         <div>
           <div className="text-[10px] uppercase tracking-wider text-emerald-400/70">Matched</div>
           <ul className="ml-1 list-disc pl-4 text-[11px] text-white/70 font-mono">
-            {result.matchedConditions.map((c, i) => <li key={i}>{c}</li>)}
+            {result.matchedConditions.map((c) => <li key={c}>{c}</li>)}
           </ul>
         </div>
       )}
@@ -114,8 +123,8 @@ function PreviewResult({ result }: { result: TraceResult }) {
         <div>
           <div className="text-[10px] uppercase tracking-wider text-rose-400/70">Failed</div>
           <ul className="ml-1 list-disc pl-4 text-[11px] text-white/70 font-mono">
-            {result.failedConditions.map((c, i) => (
-              <li key={i}>
+            {result.failedConditions.map((c) => (
+              <li key={c.condition}>
                 {c.condition}
                 <div className="ml-2 text-white/40">Actual: {formatActual(c.actual)}</div>
               </li>
