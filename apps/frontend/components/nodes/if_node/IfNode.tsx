@@ -2,16 +2,18 @@
 
 import { useCallback } from 'react'
 import { Handle, Position, useReactFlow } from '@xyflow/react'
-import type { NodeProps } from '@xyflow/react'
+import type { Node, NodeProps } from '@xyflow/react'
 import type { ConditionGroup, IfNode as IfNodeType } from '@/lib/types/workflow'
 import { useNodeConfig } from '@/lib/contexts/NodeConfigContext'
 import { TrashIcon } from '../shared/TrashIcon'
 import { BranchIcon } from './BranchIcon'
 
-export interface IfNodeData {
+export interface IfNodeData extends Record<string, unknown> {
   label: string
   config?: IfNodeType['config']
 }
+
+export type IfRFNode = Node<IfNodeData, 'if'>
 
 function countConditions(group: ConditionGroup): number {
   let count = 0
@@ -22,8 +24,7 @@ function countConditions(group: ConditionGroup): number {
   return count
 }
 
-export function IfNode({ id, data }: NodeProps) {
-  const nodeData = data as unknown as IfNodeData
+export function IfNode({ id, data }: NodeProps<IfRFNode>) {
   const { deleteElements } = useReactFlow()
   const { openIfNodeConfig } = useNodeConfig()
 
@@ -36,7 +37,7 @@ export function IfNode({ id, data }: NodeProps) {
     openIfNodeConfig(id)
   }, [id, openIfNodeConfig])
 
-  const conditionCount = nodeData.config ? countConditions(nodeData.config.conditions) : 0
+  const conditionCount = data.config ? countConditions(data.config.conditions) : 0
   const configured = conditionCount > 0
 
   return (
@@ -57,7 +58,7 @@ export function IfNode({ id, data }: NodeProps) {
       </span>
       <div className="flex flex-col gap-0.5">
         <div className="text-[10px] uppercase tracking-wider text-orange-500/70 font-medium">If</div>
-        <div className="text-xs text-white/80">{nodeData.label}</div>
+        <div className="text-xs text-white/80">{data.label}</div>
         <div className={`text-[9px] uppercase tracking-wider ${configured ? 'text-emerald-400/70' : 'text-rose-400/70'}`}>
           {configured ? `${conditionCount} ${conditionCount === 1 ? 'condition' : 'conditions'}` : 'Not configured'}
         </div>

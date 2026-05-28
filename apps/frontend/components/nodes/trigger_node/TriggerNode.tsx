@@ -2,23 +2,24 @@
 
 import { useCallback } from 'react'
 import { Handle, Position, useReactFlow } from '@xyflow/react'
-import type { NodeProps } from '@xyflow/react'
+import type { Node, NodeProps } from '@xyflow/react'
 import { TrashIcon } from '../shared/TrashIcon'
 import { ManualTriggerIcon } from './ManualTriggerIcon'
 import { ScheduleTriggerIcon } from './ScheduleTriggerIcon'
 
-export interface TriggerNodeData {
+export interface TriggerNodeData extends Record<string, unknown> {
   label: string
   triggerId: string
 }
+
+export type TriggerRFNode = Node<TriggerNodeData, 'trigger'>
 
 const TRIGGER_ICONS: Record<string, React.ReactNode> = {
   manual: <ManualTriggerIcon />,
   schedule: <ScheduleTriggerIcon />,
 }
 
-export function TriggerNode({ id, data }: NodeProps) {
-  const nodeData = data as unknown as TriggerNodeData
+export function TriggerNode({ id, data }: NodeProps<TriggerRFNode>) {
   const { deleteElements } = useReactFlow()
 
   const handleDelete = useCallback(() => {
@@ -36,11 +37,11 @@ export function TriggerNode({ id, data }: NodeProps) {
       </button>
 
       <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md border border-orange-500/30 bg-orange-500/10 text-orange-400">
-        {TRIGGER_ICONS[nodeData.triggerId]}
+        {TRIGGER_ICONS[data.triggerId]}
       </span>
       <div>
         <div className="text-[10px] uppercase tracking-wider text-orange-500/70 font-medium">Trigger</div>
-        <div className="text-xs text-white/80">{nodeData.label}</div>
+        <div className="text-xs text-white/80">{data.label}</div>
       </div>
 
       <Handle

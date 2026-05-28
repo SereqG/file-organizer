@@ -61,8 +61,6 @@ function buildCreateFolderNode(id: string, label: string): CreateFolderNode {
 export function useWorkflowDefinition() {
   const [definition, setDefinition] = useState<WorkflowDefinition | null>(null)
 
-  console.log('Current workflow definition:', definition)
-
   const addTrigger = useCallback((triggerId: TriggerId) => {
     const trigger = buildTriggerNode(triggerId)
     setDefinition({ version: WORKFLOW_VERSION, trigger, nodes: [], edges: [] })

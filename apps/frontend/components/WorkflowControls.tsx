@@ -2,12 +2,14 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useReactFlow } from '@xyflow/react'
-import type { Node, OnNodesChange } from '@xyflow/react'
+import type { OnNodesChange } from '@xyflow/react'
+import type { AppNode } from '@/hooks/useWorkflowEditor'
 import { NodesSidebar } from './nodes/nodes_sidebar/NodesSidebar'
 import { AddTriggerButton } from './AddTriggerButton'
 import { TriggerSelectModal } from './TriggerSelectModal'
 import type { TriggerId } from './TriggerSelectModal'
 import type { NodeDescriptor } from '@/lib/types/workflowNodeDescriptor'
+import { decodeDragPayload, NODE_DRAG_TYPE } from './nodes/nodes_sidebar/dragPayload'
 
 const TRIGGER_LABELS: Record<TriggerId, string> = {
   manual: 'Manual Trigger',
@@ -16,7 +18,7 @@ const TRIGGER_LABELS: Record<TriggerId, string> = {
 
 interface WorkflowControlsProps {
   hasTrigger: boolean
-  onNodesChange: OnNodesChange<Node>
+  onNodesChange: OnNodesChange<AppNode>
   onTriggerAdded: (triggerId: TriggerId) => void
   onGeneralNodeAdded: (id: string, nodeType: string, label: string) => void
   dropHandlerRef: React.MutableRefObject<((e: React.DragEvent<HTMLDivElement>) => void) | null>
@@ -33,7 +35,7 @@ export function WorkflowControls({ hasTrigger, onNodesChange, onTriggerAdded, on
     if (entry.kind === 'trigger') {
       if (hasTrigger) return
       const triggerId = entry.triggerId as TriggerId
-      const newNode: Node = {
+      const newNode: AppNode = {
         id: `trigger-${Date.now()}`,
         type: 'trigger',
         position,
@@ -45,19 +47,19 @@ export function WorkflowControls({ hasTrigger, onNodesChange, onTriggerAdded, on
     }
 
     const id = `${entry.nodeType}-${Date.now()}`
-    const data = entry.nodeType === 'if'
-      ? { label: entry.label, config: { conditions: { id: `group-${Date.now()}`, operator: 'AND', children: [] } } }
-      : { label: entry.label }
-    const newNode: Node = { id, type: entry.nodeType, position, data }
+    const newNode: AppNode = entry.nodeType === 'if'
+      ? { id, type: 'if', position, data: { label: entry.label, config: { conditions: { id: `group-${Date.now()}`, operator: 'AND' as const, children: [] } } } }
+      : { id, type: 'createFolder', position, data: { label: entry.label } }
     onNodesChange([{ type: 'add', item: newNode }])
     onGeneralNodeAdded(id, entry.nodeType, entry.label)
   }, [hasTrigger, screenToFlowPosition, onNodesChange, onTriggerAdded, onGeneralNodeAdded])
 
   useEffect(() => {
     dropHandlerRef.current = (event: React.DragEvent<HTMLDivElement>) => {
-      const raw = event.dataTransfer.getData('application/node')
+      const raw = event.dataTransfer.getData(NODE_DRAG_TYPE)
       if (!raw) return
-      const entry = JSON.parse(raw) as NodeDescriptor
+      const entry = decodeDragPayload(raw)
+      if (!entry) return
       addNode(entry, { x: event.clientX, y: event.clientY })
     }
   }, [addNode, dropHandlerRef])

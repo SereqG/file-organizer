@@ -2,18 +2,16 @@
 
 import { useState } from 'react'
 import type { FileTreeNode } from '@/lib/types/explore'
+import { initialExpandedIds } from '@/lib/utils/fileTree'
 import { FileTreeNodeItem } from './FileTreeNodeItem'
+import { useTreeKeyboardNav } from '@/hooks/useTreeKeyboardNav'
 
 interface Props {
   root: FileTreeNode
 }
 
 export function FileTree({ root }: Props) {
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(() => {
-    const ids = new Set<string>()
-    collectDirectoryIds(root, ids, 2)
-    return ids
-  })
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(() => initialExpandedIds(root))
 
   function toggle(id: string) {
     setExpandedIds(prev => {
@@ -27,41 +25,56 @@ export function FileTree({ root }: Props) {
     })
   }
 
+  const keyboardNav = useTreeKeyboardNav({ root, expandedIds, onToggle: toggle })
+
   return (
-    <div className="overflow-auto max-h-[560px] rounded-xl border border-white/[0.07] bg-white/[0.02] py-3">
-      <NodeRenderer node={root} expandedIds={expandedIds} onToggle={toggle} />
+    <div
+      role="tree"
+      aria-label="File tree"
+      className="overflow-auto max-h-[560px] rounded-xl border border-white/[0.07] bg-white/[0.02] py-3"
+    >
+      <NodeRenderer node={root} expandedIds={expandedIds} onToggle={toggle} keyboardNav={keyboardNav} />
     </div>
   )
 }
+
+type KeyboardNav = ReturnType<typeof useTreeKeyboardNav>
 
 interface RendererProps {
   node: FileTreeNode
   expandedIds: Set<string>
   onToggle: (id: string) => void
+  keyboardNav: KeyboardNav
 }
 
-function NodeRenderer({ node, expandedIds, onToggle }: RendererProps) {
+function NodeRenderer({ node, expandedIds, onToggle, keyboardNav }: RendererProps) {
   const isExpanded = expandedIds.has(node.id)
+  const isDir = node.type === 'directory'
 
   return (
-    <div>
+    <div
+      role="treeitem"
+      aria-expanded={isDir && !node.skipped ? isExpanded : undefined}
+      tabIndex={keyboardNav.getTabIndex(node.id)}
+      onKeyDown={(e) => { e.stopPropagation(); keyboardNav.handleItemKeyDown(e, node) }}
+      onFocus={(e) => { e.stopPropagation(); keyboardNav.onItemFocus(node.id) }}
+      ref={(el) => keyboardNav.registerRef(node.id, el)}
+      className="outline-none"
+    >
       <FileTreeNodeItem
         node={node}
         isExpanded={isExpanded}
         onToggle={() => onToggle(node.id)}
+        isFocused={keyboardNav.focusedId === node.id}
       />
-      {isExpanded && node.children && node.children.map(child => (
-        <NodeRenderer key={child.id} node={child} expandedIds={expandedIds} onToggle={onToggle} />
-      ))}
+      {isExpanded && isDir && node.children && (
+        <div role="group">
+          {node.children.map(child => (
+            <NodeRenderer key={child.id} node={child} expandedIds={expandedIds} onToggle={onToggle} keyboardNav={keyboardNav} />
+          ))}
+        </div>
+      )}
     </div>
   )
 }
 
-function collectDirectoryIds(node: FileTreeNode, ids: Set<string>, maxLevel: number) {
-  if (node.type === 'directory' && node.level <= maxLevel) {
-    ids.add(node.id)
-  }
-  if (node.children) {
-    node.children.forEach(child => collectDirectoryIds(child, ids, maxLevel))
-  }
-}

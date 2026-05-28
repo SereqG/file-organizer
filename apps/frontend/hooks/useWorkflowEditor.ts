@@ -2,19 +2,24 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNodesState, useEdgesState, addEdge } from '@xyflow/react'
-import type { Node, Edge, Connection } from '@xyflow/react'
+import type { Edge, Connection } from '@xyflow/react'
 import type { TriggerId } from '@/components/TriggerSelectModal'
 import type { CreateFolderNode as CreateFolderNodeType, IfNode as IfNodeType } from '@/lib/types/workflow'
 import { useWorkflowDefinition } from '@/hooks/useWorkflowDefinition'
 import { TriggerNode } from '@/components/nodes/trigger_node/TriggerNode'
+import type { TriggerRFNode } from '@/components/nodes/trigger_node/TriggerNode'
 import { IfNode } from '@/components/nodes/if_node/IfNode'
+import type { IfRFNode } from '@/components/nodes/if_node/IfNode'
 import { CreateFolderNode } from '@/components/nodes/create_folder_node/CreateFolderNode'
+import type { CreateFolderRFNode } from '@/components/nodes/create_folder_node/CreateFolderNode'
+
+export type AppNode = TriggerRFNode | IfRFNode | CreateFolderRFNode
 
 const NODE_TYPES = { trigger: TriggerNode, if: IfNode, createFolder: CreateFolderNode }
 
 export function useWorkflowEditor() {
   const [mounted, setMounted] = useState(false)
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
+  const [nodes, setNodes, onNodesChange] = useNodesState<AppNode>([])
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
   const nodeTypes = useMemo(() => NODE_TYPES, [])
   const dropHandlerRef = useRef<((e: React.DragEvent<HTMLDivElement>) => void) | null>(null)
@@ -41,7 +46,7 @@ export function useWorkflowEditor() {
     addGeneralNode(id, nodeType, label)
   }, [addGeneralNode])
 
-  const handleNodesDelete = useCallback((deleted: Node[]) => {
+  const handleNodesDelete = useCallback((deleted: AppNode[]) => {
     for (const node of deleted) {
       if (node.type === 'trigger') {
         removeTrigger()
@@ -70,7 +75,7 @@ export function useWorkflowEditor() {
   const handleIfConfigSave = useCallback((config: IfNodeType['config']) => {
     if (!editingIfNodeId) return
     setNodes((prev) => prev.map((n) =>
-      n.id === editingIfNodeId ? { ...n, data: { ...n.data, config } } : n
+      n.id === editingIfNodeId ? { ...n, data: { ...n.data, config } } as AppNode : n
     ))
     updateIfNodeConfig(editingIfNodeId, config)
   }, [editingIfNodeId, setNodes, updateIfNodeConfig])
@@ -78,7 +83,7 @@ export function useWorkflowEditor() {
   const handleCreateFolderConfigSave = useCallback((config: CreateFolderNodeType['config']) => {
     if (!editingCreateFolderNodeId) return
     setNodes((prev) => prev.map((n) =>
-      n.id === editingCreateFolderNodeId ? { ...n, data: { ...n.data, config } } : n
+      n.id === editingCreateFolderNodeId ? { ...n, data: { ...n.data, config } } as AppNode : n
     ))
     updateCreateFolderNodeConfig(editingCreateFolderNodeId, config)
   }, [editingCreateFolderNodeId, setNodes, updateCreateFolderNodeConfig])

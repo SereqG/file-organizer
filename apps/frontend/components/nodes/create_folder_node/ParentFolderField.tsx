@@ -23,7 +23,12 @@ export function ParentFolderField({ workspaceTree, selectedId, selectedNode, onS
         onSelect={onSelect}
       />
       {selectedNode ? (
-        <span className="text-[11px] text-sky-400/70 font-mono truncate">{selectedNode.path}</span>
+        <span
+          title={selectedNode.path}
+          className="text-[11px] text-sky-400/70 font-mono truncate hover:overflow-visible hover:whitespace-normal hover:break-all"
+        >
+          {selectedNode.path}
+        </span>
       ) : (
         <span className="text-[11px] text-white/25">Select a folder from the tree above</span>
       )}

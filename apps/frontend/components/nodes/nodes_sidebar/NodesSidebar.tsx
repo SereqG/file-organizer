@@ -1,155 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import type { NodeDescriptor, NodeKind } from '@/lib/types/workflowNodeDescriptor'
-import { ChevronIcon } from './ChevronIcon'
-
-interface NodeEntry {
-  kind: NodeKind
-  nodeType: string
-  triggerId?: string
-  label: string
-  icon: React.ReactNode
-}
-
-interface NodeCategory {
-  name: string
-  nodes: NodeEntry[]
-}
-
-const CATEGORIES: NodeCategory[] = [
-  {
-    name: 'Triggers',
-    nodes: [
-      {
-        kind: 'trigger',
-        nodeType: 'trigger',
-        triggerId: 'manual',
-        label: 'Manual Trigger',
-        icon: (
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path
-              d="M4.5 2.5V8L6 6.5H10L4.5 2.5Z"
-              stroke="currentColor"
-              strokeWidth="1.25"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M6 6.5L8 11"
-              stroke="currentColor"
-              strokeWidth="1.25"
-              strokeLinecap="round"
-            />
-          </svg>
-        ),
-      },
-      {
-        kind: 'trigger',
-        nodeType: 'trigger',
-        triggerId: 'schedule',
-        label: 'Schedule',
-        icon: (
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="7" cy="7" r="5" stroke="currentColor" strokeWidth="1.25" />
-            <path d="M7 4.5V7L8.5 8.5" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        ),
-      },
-    ],
-  },
-  {
-    name: 'General',
-    nodes: [
-      {
-        kind: 'general',
-        nodeType: 'if',
-        label: 'If',
-        icon: (
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M3 2V6.5L7 9V12" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M11 2V6.5L7 9" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        ),
-      },
-    ],
-  },
-  {
-    name: 'Create',
-    nodes: [
-      {
-        kind: 'create',
-        nodeType: 'createFolder',
-        label: 'Create Folder',
-        icon: (
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M1.5 3.5C1.5 3.5 3 3.5 4 3.5L5.5 2H12.5V10.5H1.5V3.5Z" stroke="currentColor" strokeWidth="1.25" strokeLinejoin="round" />
-            <path d="M7 5.5V8.5M5.5 7H8.5" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
-          </svg>
-        ),
-      },
-    ],
-  },
-]
-
-interface NodeItemProps extends NodeEntry {
-  disabled?: boolean
-  onAddNode: (entry: NodeDescriptor) => void
-}
-
-function NodeItem({ kind, nodeType, triggerId, label, icon, disabled, onAddNode }: NodeItemProps) {
-  const descriptor: NodeDescriptor = { kind, nodeType, triggerId, label }
-
-  const handleDragStart = (event: React.DragEvent) => {
-    if (disabled) { event.preventDefault(); return }
-    event.dataTransfer.setData('application/node', JSON.stringify(descriptor))
-    event.dataTransfer.effectAllowed = 'move'
-  }
-
-  return (
-    <div
-      className={`flex items-center gap-2.5 rounded-md px-2.5 py-2 transition-colors ${
-        disabled
-          ? 'cursor-not-allowed opacity-35'
-          : 'cursor-grab text-white/60 hover:bg-white/5 hover:text-white/90 active:cursor-grabbing'
-      }`}
-      draggable={!disabled}
-      onClick={() => { if (!disabled) onAddNode(descriptor) }}
-      onDragStart={handleDragStart}
-    >
-      <span className="flex-shrink-0 text-white/40">{icon}</span>
-      <span className="text-xs">{label}</span>
-    </div>
-  )
-}
-
-interface CategorySectionProps extends NodeCategory {
-  disabled?: boolean
-  onAddNode: (entry: NodeDescriptor) => void
-}
-
-function CategorySection({ name, nodes, disabled, onAddNode }: CategorySectionProps) {
-  const [open, setOpen] = useState(true)
-
-  return (
-    <div>
-      <button
-        onClick={() => setOpen((prev) => !prev)}
-        className="flex w-full items-center gap-2 px-2.5 py-1.5 text-white/40 hover:text-white/70 transition-colors"
-      >
-        <ChevronIcon open={open} />
-        <span className="text-[11px] font-medium uppercase tracking-wider">{name}</span>
-      </button>
-
-      {open && (
-        <div className="mt-0.5 flex flex-col gap-0.5 px-1">
-          {nodes.map((node) => (
-            <NodeItem key={node.label} {...node} disabled={disabled} onAddNode={onAddNode} />
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
+import type { NodeDescriptor } from '@/lib/types/workflowNodeDescriptor'
+import { NODE_CATEGORIES } from '@/lib/workflow/registry/nodeCatalog'
+import { CategorySection } from './CategorySection'
 
 interface NodesSidebarProps {
   triggerDisabled?: boolean
@@ -181,7 +35,7 @@ export function NodesSidebar({ onAddNode, triggerDisabled }: NodesSidebarProps) 
 
       {expanded && (
         <div className="flex flex-col gap-1 py-2 w-44">
-          {CATEGORIES.map((category) => (
+          {NODE_CATEGORIES.map((category) => (
             <CategorySection
               key={category.name}
               {...category}

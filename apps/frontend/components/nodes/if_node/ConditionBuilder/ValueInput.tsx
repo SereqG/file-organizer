@@ -2,6 +2,7 @@
 
 import type { ConditionOperator } from '@/lib/types/workflow'
 import { ITEM_TYPE_VALUES, getFieldDescriptor, type FieldValueKind } from '@/lib/workflow/registry/conditionFields'
+import { formatBytes } from '@/lib/utils/format'
 
 interface ValueInputProps {
   field: string
@@ -154,11 +155,4 @@ function SizeInput({ value, onChange }: { value: unknown; onChange: (v: unknown)
       className={`${inputClass} w-28`}
     />
   )
-}
-
-function formatBytes(n: number): string {
-  if (n >= SIZE_UNITS.GB) return `${(n / SIZE_UNITS.GB).toFixed(2).replace(/\.?0+$/, '')}GB`
-  if (n >= SIZE_UNITS.MB) return `${(n / SIZE_UNITS.MB).toFixed(2).replace(/\.?0+$/, '')}MB`
-  if (n >= SIZE_UNITS.KB) return `${(n / SIZE_UNITS.KB).toFixed(2).replace(/\.?0+$/, '')}KB`
-  return `${n}B`
 }

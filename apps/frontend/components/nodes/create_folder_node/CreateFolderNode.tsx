@@ -2,19 +2,20 @@
 
 import { useCallback } from 'react'
 import { Handle, Position, useReactFlow } from '@xyflow/react'
-import type { NodeProps } from '@xyflow/react'
+import type { Node, NodeProps } from '@xyflow/react'
 import type { CreateFolderNode as CreateFolderNodeType } from '@/lib/types/workflow'
 import { useNodeConfig } from '@/lib/contexts/NodeConfigContext'
 import { TrashIcon } from '../shared/TrashIcon'
 import { FolderPlusIcon } from './FolderPlusIcon'
 
-export interface CreateFolderNodeData {
+export interface CreateFolderNodeData extends Record<string, unknown> {
   label: string
   config?: CreateFolderNodeType['config']
 }
 
-export function CreateFolderNode({ id, data }: NodeProps) {
-  const nodeData = data as unknown as CreateFolderNodeData
+export type CreateFolderRFNode = Node<CreateFolderNodeData, 'createFolder'>
+
+export function CreateFolderNode({ id, data }: NodeProps<CreateFolderRFNode>) {
   const { deleteElements } = useReactFlow()
   const { openCreateFolderNodeConfig } = useNodeConfig()
 
@@ -27,7 +28,8 @@ export function CreateFolderNode({ id, data }: NodeProps) {
     openCreateFolderNodeConfig(id)
   }, [id, openCreateFolderNodeConfig])
 
-  const configured = !!(nodeData.config?.folderName && nodeData.config?.parentFolderId)
+  const folderName = data.config?.folderName
+  const configured = !!(folderName && data.config?.parentFolderId)
 
   return (
     <div
@@ -47,9 +49,9 @@ export function CreateFolderNode({ id, data }: NodeProps) {
       </span>
       <div className="flex flex-col gap-0.5">
         <div className="text-[10px] uppercase tracking-wider text-sky-500/70 font-medium">Create</div>
-        <div className="text-xs text-white/80">{nodeData.label}</div>
+        <div className="text-xs text-white/80">{data.label}</div>
         <div className={`text-[9px] uppercase tracking-wider ${configured ? 'text-emerald-400/70' : 'text-rose-400/70'}`}>
-          {configured ? nodeData.config!.folderName : 'Not configured'}
+          {configured ? folderName : 'Not configured'}
         </div>
       </div>
 
