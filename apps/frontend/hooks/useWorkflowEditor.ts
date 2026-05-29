@@ -28,6 +28,7 @@ export function useWorkflowEditor() {
   const [editingCreateFolderNodeId, setEditingCreateFolderNodeId] = useState<string | null>(null)
 
   const {
+    definition,
     addTrigger,
     removeTrigger,
     addGeneralNode,
@@ -94,6 +95,7 @@ export function useWorkflowEditor() {
 
   return {
     mounted,
+    definition,
     nodes,
     edges,
     nodeTypes,

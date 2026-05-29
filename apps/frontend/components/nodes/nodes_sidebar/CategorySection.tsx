@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import type { NodeDescriptor } from '@/lib/types/workflowNodeDescriptor'
 import type { NodeCategory } from '@/lib/workflow/registry/nodeCatalog'
-import { ChevronIcon } from './ChevronIcon'
+import { LuChevronRight } from 'react-icons/lu'
 import { NodeItem } from './NodeItem'
 
 interface CategorySectionProps extends NodeCategory {
@@ -20,7 +20,7 @@ export function CategorySection({ name, nodes, disabled, onAddNode }: CategorySe
         onClick={() => setOpen((prev) => !prev)}
         className="flex w-full items-center gap-2 px-2.5 py-1.5 text-white/40 hover:text-white/70 transition-colors"
       >
-        <ChevronIcon open={open} />
+        <LuChevronRight size={12} className={`transition-transform duration-200 ${open ? 'rotate-90' : ''}`} />
         <span className="text-[11px] font-medium uppercase tracking-wider">{name}</span>
       </button>
 
