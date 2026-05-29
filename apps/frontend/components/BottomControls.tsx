@@ -6,13 +6,14 @@ import { RuntimeControls } from './RuntimeControls'
 
 interface BottomControlsProps {
   definition: WorkflowDefinition | null
+  rootPath: string
 }
 
-export function BottomControls({ definition }: BottomControlsProps) {
+export function BottomControls({ definition, rootPath }: BottomControlsProps) {
   return (
     <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex items-center gap-3">
       <ViewportControls />
-      <RuntimeControls definition={definition} />
+      <RuntimeControls definition={definition} rootPath={rootPath} />
     </div>
   )
 }

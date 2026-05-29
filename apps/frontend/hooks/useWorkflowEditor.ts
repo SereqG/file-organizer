@@ -58,7 +58,8 @@ export function useWorkflowEditor() {
   }, [removeTrigger, removeNode])
 
   const handleConnect = useCallback((connection: Connection) => {
-    setEdges((prev) => addEdge(connection, prev))
+    const edgeId = `${connection.source}-${connection.sourceHandle ?? 'default'}->${connection.target}`
+    setEdges((prev) => addEdge({ ...connection, id: edgeId }, prev))
     addWorkflowEdge(connection)
   }, [setEdges, addWorkflowEdge])
 
