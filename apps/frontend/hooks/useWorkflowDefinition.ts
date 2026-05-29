@@ -8,9 +8,11 @@ import type { TriggerId } from '@/components/TriggerSelectModal'
 const WORKFLOW_VERSION = '1.0'
 
 function buildTriggerNode(triggerId: TriggerId): WorkflowTriggerNode {
+  const id = `trigger-${Date.now()}`
+
   if (triggerId === 'manual') {
     return {
-      id: 'trigger',
+      id,
       type: 'manual_trigger',
       category: 'trigger',
       name: 'Manual Trigger',
@@ -20,7 +22,7 @@ function buildTriggerNode(triggerId: TriggerId): WorkflowTriggerNode {
   }
 
   return {
-    id: 'trigger',
+    id,
     type: 'schedule_trigger',
     category: 'trigger',
     name: 'Schedule',
