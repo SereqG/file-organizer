@@ -1,5 +1,6 @@
 'use client'
 
+import { LuCircleAlert } from 'react-icons/lu'
 import type { FileTreeNode } from '@/lib/types/explore'
 import { useExploreJob } from '@/hooks/useExploreJob'
 import { DepthConfirmModal } from './DepthConfirmModal'
@@ -39,12 +40,7 @@ export function FolderExplorer({ sessionId, onNextStep }: Props) {
   if (state.phase === 'error') {
     return (
       <div className="mt-8 flex items-start gap-3 rounded-xl border border-red-500/20 bg-red-500/[0.06] px-5 py-4">
-        <span className="mt-0.5 shrink-0 text-red-400">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" />
-            <path d="M8 5v3.5M8 10.5v.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-          </svg>
-        </span>
+        <LuCircleAlert size={16} className="mt-0.5 shrink-0 text-red-400" />
         <p className="text-sm text-red-400 leading-relaxed">{state.message}</p>
       </div>
     )

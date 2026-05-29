@@ -6,7 +6,7 @@ import type { FileTreeNode } from '@/lib/types/explore'
 import { useWorkflowEditor } from '@/hooks/useWorkflowEditor'
 import { NodeConfigContext } from '@/lib/contexts/NodeConfigContext'
 import { WorkspaceIndicator } from './WorkspaceIndicator'
-import { ViewportControls } from './ViewportControls'
+import { BottomControls } from './BottomControls'
 import { IfConfigModal } from './nodes/if_node/IfConfigModal'
 import { CreateFolderConfigModal } from './nodes/create_folder_node/CreateFolderConfigModal'
 import { WorkflowControls } from './WorkflowControls'
@@ -19,6 +19,7 @@ interface WorkflowEditorProps {
 export function WorkflowEditor({ workspacePath, workspaceTree }: WorkflowEditorProps) {
   const {
     mounted,
+    definition,
     nodes,
     edges,
     nodeTypes,
@@ -72,7 +73,7 @@ export function WorkflowEditor({ workspacePath, workspaceTree }: WorkflowEditorP
               color="rgba(255, 255, 255, 0.4)"
               bgColor="#080808"
             />
-            <ViewportControls />
+            <BottomControls definition={definition} />
             <WorkflowControls
               hasTrigger={hasTrigger}
               onNodesChange={onNodesChange}

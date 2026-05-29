@@ -5,8 +5,7 @@ import { Handle, Position, useReactFlow } from '@xyflow/react'
 import type { Node, NodeProps } from '@xyflow/react'
 import type { CreateFolderNode as CreateFolderNodeType } from '@/lib/types/workflow'
 import { useNodeConfig } from '@/lib/contexts/NodeConfigContext'
-import { TrashIcon } from '../shared/TrashIcon'
-import { FolderPlusIcon } from './FolderPlusIcon'
+import { LuTrash2, LuFolderPlus } from 'react-icons/lu'
 
 export interface CreateFolderNodeData extends Record<string, unknown> {
   label: string
@@ -41,11 +40,11 @@ export function CreateFolderNode({ id, data }: NodeProps<CreateFolderRFNode>) {
         className="absolute -top-2.5 -right-2.5 flex h-5 w-5 items-center justify-center rounded-full border border-red-500/60 bg-[#111] text-red-500/80 transition-colors hover:border-red-500 hover:bg-red-500/10 hover:text-red-400"
         aria-label="Delete node"
       >
-        <TrashIcon />
+        <LuTrash2 size={10} />
       </button>
 
       <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md border border-sky-500/30 bg-sky-500/10 text-sky-400">
-        <FolderPlusIcon />
+        <LuFolderPlus size={16} />
       </span>
       <div className="flex flex-col gap-0.5">
         <div className="text-[10px] uppercase tracking-wider text-sky-500/70 font-medium">Create</div>

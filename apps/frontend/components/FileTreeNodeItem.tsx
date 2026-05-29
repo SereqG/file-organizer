@@ -1,3 +1,4 @@
+import { LuChevronDown, LuChevronRight, LuFolder, LuFile } from 'react-icons/lu'
 import type { FileTreeNode } from '@/lib/types/explore'
 import { formatBytes } from '@/lib/utils/format'
 
@@ -35,39 +36,14 @@ export function FileTreeNodeItem({ node, isExpanded, onToggle, isFocused }: Prop
           className="shrink-0 text-white/30 hover:text-white/60 transition-colors"
           aria-label={isExpanded ? 'Collapse' : 'Expand'}
         >
-          <svg width="13" height="13" viewBox="0 0 12 12" fill="none">
-            <path
-              d={isExpanded ? 'M2 4l4 4 4-4' : 'M4 2l4 4-4 4'}
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+          {isExpanded ? <LuChevronDown size={13} /> : <LuChevronRight size={13} />}
         </button>
       ) : (
         <span className="shrink-0 w-3.5" />
       )}
 
       <span className={`shrink-0 ${isSkipped ? 'text-white/20' : isDir ? 'text-orange-400/70' : 'text-white/40'}`}>
-        {isDir ? (
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path
-              d="M2 5a1.5 1.5 0 0 1 1.5-1.5h3l1 1h5A1.5 1.5 0 0 1 14 6v5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 11V5z"
-              stroke="currentColor"
-              strokeWidth="1.2"
-            />
-          </svg>
-        ) : (
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path
-              d="M4 2h6l3 3v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"
-              stroke="currentColor"
-              strokeWidth="1.2"
-            />
-            <path d="M10 2v3h3" stroke="currentColor" strokeWidth="1.2" />
-          </svg>
-        )}
+        {isDir ? <LuFolder size={16} /> : <LuFile size={16} />}
       </span>
 
       <span className={`text-sm font-mono truncate ${isSkipped ? 'text-white/25 line-through' : 'text-white/80'}`}>
