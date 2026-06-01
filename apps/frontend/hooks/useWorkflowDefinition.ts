@@ -2,14 +2,12 @@
 
 import { useState, useCallback } from 'react'
 import type { Connection } from '@xyflow/react'
-import type { CreateFolderNode, IfNode, WorkflowDefinition, WorkflowEdge, WorkflowTriggerNode } from '@/lib/types/workflow'
+import type { CreateFolderNode, DeleteFolderNode, IfNode, RenameFolderNode, WorkflowDefinition, WorkflowEdge, WorkflowTriggerNode } from '@/lib/types/workflow'
 import type { TriggerId } from '@/components/TriggerSelectModal'
 
 const WORKFLOW_VERSION = '1.0'
 
-function buildTriggerNode(triggerId: TriggerId): WorkflowTriggerNode {
-  const id = `trigger-${Date.now()}`
-
+function buildTriggerNode(triggerId: TriggerId, id: string): WorkflowTriggerNode {
   if (triggerId === 'manual') {
     return {
       id,
@@ -54,8 +52,37 @@ function buildCreateFolderNode(id: string, label: string): CreateFolderNode {
     version: 1,
     config: {
       folderName: '',
-      parentFolderId: '',
+      parentFolderPath: '',
       ifExists: 'reuse_existing',
+    },
+  }
+}
+
+function buildDeleteFolderNode(id: string, label: string): DeleteFolderNode {
+  return {
+    id,
+    type: 'deleteFolder',
+    category: 'general',
+    name: label,
+    version: 1,
+    config: {
+      deleteAllEncountered: false,
+      folderPaths: [],
+    },
+  }
+}
+
+function buildRenameFolderNode(id: string, label: string): RenameFolderNode {
+  return {
+    id,
+    type: 'renameFolder',
+    category: 'general',
+    name: label,
+    version: 1,
+    config: {
+      folderPath: '',
+      newName: '',
+      ifExists: 'fail',
     },
   }
 }
@@ -63,8 +90,8 @@ function buildCreateFolderNode(id: string, label: string): CreateFolderNode {
 export function useWorkflowDefinition() {
   const [definition, setDefinition] = useState<WorkflowDefinition | null>(null)
 
-  const addTrigger = useCallback((triggerId: TriggerId) => {
-    const trigger = buildTriggerNode(triggerId)
+  const addTrigger = useCallback((triggerId: TriggerId, rfNodeId: string) => {
+    const trigger = buildTriggerNode(triggerId, rfNodeId)
     setDefinition({ version: WORKFLOW_VERSION, trigger, nodes: [], edges: [] })
   }, [])
 
@@ -77,6 +104,8 @@ export function useWorkflowDefinition() {
       if (!prev) return prev
       if (nodeType === 'if') return { ...prev, nodes: [...prev.nodes, buildIfNode(id, label)] }
       if (nodeType === 'createFolder') return { ...prev, nodes: [...prev.nodes, buildCreateFolderNode(id, label)] }
+      if (nodeType === 'deleteFolder') return { ...prev, nodes: [...prev.nodes, buildDeleteFolderNode(id, label)] }
+      if (nodeType === 'renameFolder') return { ...prev, nodes: [...prev.nodes, buildRenameFolderNode(id, label)] }
       return prev
     })
   }, [])
@@ -104,6 +133,26 @@ export function useWorkflowDefinition() {
       return {
         ...prev,
         nodes: prev.nodes.map((n) => (n.id === id && n.type === 'createFolder' ? { ...n, config } : n)),
+      }
+    })
+  }, [])
+
+  const updateDeleteFolderNodeConfig = useCallback((id: string, config: DeleteFolderNode['config']) => {
+    setDefinition((prev) => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        nodes: prev.nodes.map((n) => (n.id === id && n.type === 'deleteFolder' ? { ...n, config } : n)),
+      }
+    })
+  }, [])
+
+  const updateRenameFolderNodeConfig = useCallback((id: string, config: RenameFolderNode['config']) => {
+    setDefinition((prev) => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        nodes: prev.nodes.map((n) => (n.id === id && n.type === 'renameFolder' ? { ...n, config } : n)),
       }
     })
   }, [])
@@ -137,6 +186,8 @@ export function useWorkflowDefinition() {
     removeNode,
     updateIfNodeConfig,
     updateCreateFolderNodeConfig,
+    updateDeleteFolderNodeConfig,
+    updateRenameFolderNodeConfig,
     addWorkflowEdge,
     removeWorkflowEdge,
   }

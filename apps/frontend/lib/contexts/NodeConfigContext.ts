@@ -5,6 +5,8 @@ import { createContext, useContext } from 'react'
 export interface NodeConfigContextValue {
   openIfNodeConfig: (nodeId: string) => void
   openCreateFolderNodeConfig: (nodeId: string) => void
+  openDeleteFolderNodeConfig: (nodeId: string) => void
+  openRenameFolderNodeConfig: (nodeId: string) => void
 }
 
 export const NodeConfigContext = createContext<NodeConfigContextValue | null>(null)

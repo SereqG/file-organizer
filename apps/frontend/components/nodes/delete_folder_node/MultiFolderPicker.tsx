@@ -7,16 +7,18 @@ import { useTreeKeyboardNav } from '@/hooks/useTreeKeyboardNav'
 
 const directoryFilter = (n: FileTreeNode) => n.type === 'directory'
 
-interface FolderPickerProps {
+interface MultiFolderPickerProps {
   root: FileTreeNode
-  selectedPath: string | null
-  onSelect: (node: FileTreeNode) => void
+  selectedPaths: string[]
+  onToggle: (path: string) => void
+  disabled?: boolean
 }
 
-export function FolderPicker({ root, selectedPath, onSelect }: FolderPickerProps) {
+export function MultiFolderPicker({ root, selectedPaths, onToggle, disabled }: MultiFolderPickerProps) {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => initialExpandedIds(root))
+  const selected = new Set(selectedPaths)
 
-  function toggle(id: string) {
+  function toggleExpand(id: string) {
     setExpandedIds(prev => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
@@ -28,23 +30,24 @@ export function FolderPicker({ root, selectedPath, onSelect }: FolderPickerProps
   const keyboardNav = useTreeKeyboardNav({
     root,
     expandedIds,
-    onToggle: toggle,
-    onSelect,
+    onToggle: toggleExpand,
+    onSelect: disabled ? undefined : (node) => onToggle(node.path),
     filter: directoryFilter,
   })
 
   return (
     <div
       role="tree"
-      aria-label="Folder picker"
-      className="overflow-auto max-h-48 rounded-lg border border-white/10 bg-[#0d0d0d] py-1"
+      aria-label="Folders to delete"
+      aria-multiselectable="true"
+      className={`overflow-auto max-h-48 rounded-lg border border-white/10 bg-[#0d0d0d] py-1 ${disabled ? 'pointer-events-none opacity-40' : ''}`}
     >
       <FolderNode
         node={root}
         expandedIds={expandedIds}
-        selectedPath={selectedPath}
-        onToggle={toggle}
-        onSelect={onSelect}
+        selected={selected}
+        onToggleExpand={toggleExpand}
+        onToggleSelect={onToggle}
         keyboardNav={keyboardNav}
       />
     </div>
@@ -56,17 +59,17 @@ type KeyboardNav = ReturnType<typeof useTreeKeyboardNav>
 interface FolderNodeProps {
   node: FileTreeNode
   expandedIds: Set<string>
-  selectedPath: string | null
-  onToggle: (id: string) => void
-  onSelect: (node: FileTreeNode) => void
+  selected: Set<string>
+  onToggleExpand: (id: string) => void
+  onToggleSelect: (path: string) => void
   keyboardNav: KeyboardNav
 }
 
-function FolderNode({ node, expandedIds, selectedPath, onToggle, onSelect, keyboardNav }: FolderNodeProps) {
+function FolderNode({ node, expandedIds, selected, onToggleExpand, onToggleSelect, keyboardNav }: FolderNodeProps) {
   if (node.type !== 'directory') return null
 
   const isExpanded = expandedIds.has(node.id)
-  const isSelected = node.path === selectedPath
+  const isSelected = selected.has(node.path)
   const isSkipped = node.skipped === true
   const indent = node.level * 16
   const hasChildren = node.children?.some(c => c.type === 'directory') ?? false
@@ -84,12 +87,12 @@ function FolderNode({ node, expandedIds, selectedPath, onToggle, onSelect, keybo
       className="outline-none"
     >
       <div
-        onClick={() => { if (!isSkipped) onSelect(node) }}
+        onClick={() => { if (!isSkipped) onToggleSelect(node.path) }}
         className={`flex items-center gap-2 py-1 pr-3 rounded-md transition-colors ${
           isSkipped
             ? 'cursor-default opacity-40'
             : isSelected
-              ? 'bg-sky-500/20 cursor-pointer'
+              ? 'bg-rose-500/20 cursor-pointer'
               : isFocused
                 ? 'bg-white/[0.06] cursor-pointer'
                 : 'hover:bg-white/[0.04] cursor-pointer'
@@ -97,7 +100,7 @@ function FolderNode({ node, expandedIds, selectedPath, onToggle, onSelect, keybo
         style={{ paddingLeft: `${indent + 10}px` }}
       >
         <button
-          onClick={(e) => { e.stopPropagation(); if (hasChildren) onToggle(node.id) }}
+          onClick={(e) => { e.stopPropagation(); if (hasChildren) onToggleExpand(node.id) }}
           tabIndex={-1}
           className={`shrink-0 transition-colors ${hasChildren ? 'text-white/30 hover:text-white/60' : 'text-transparent cursor-default'}`}
           aria-label={isExpanded ? 'Collapse' : 'Expand'}
@@ -113,17 +116,18 @@ function FolderNode({ node, expandedIds, selectedPath, onToggle, onSelect, keybo
           </svg>
         </button>
 
-        <span className={isSelected ? 'text-sky-400' : 'text-sky-500/60'}>
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-            <path
-              d="M2 5a1.5 1.5 0 0 1 1.5-1.5h3l1 1h5A1.5 1.5 0 0 1 14 6v5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 11V5z"
-              stroke="currentColor"
-              strokeWidth="1.2"
-            />
-          </svg>
-        </span>
+        <input
+          type="checkbox"
+          checked={isSelected}
+          disabled={isSkipped}
+          tabIndex={-1}
+          onClick={(e) => e.stopPropagation()}
+          onChange={() => { if (!isSkipped) onToggleSelect(node.path) }}
+          className="h-3 w-3 shrink-0 accent-rose-500"
+          aria-label={`Select ${node.name}`}
+        />
 
-        <span className={`text-xs font-mono truncate ${isSelected ? 'text-sky-300' : 'text-white/70'}`}>
+        <span className={`text-xs font-mono truncate ${isSelected ? 'text-rose-300' : 'text-white/70'}`}>
           {node.name}
         </span>
       </div>
@@ -135,9 +139,9 @@ function FolderNode({ node, expandedIds, selectedPath, onToggle, onSelect, keybo
               key={child.id}
               node={child}
               expandedIds={expandedIds}
-              selectedPath={selectedPath}
-              onToggle={onToggle}
-              onSelect={onSelect}
+              selected={selected}
+              onToggleExpand={onToggleExpand}
+              onToggleSelect={onToggleSelect}
               keyboardNav={keyboardNav}
             />
           ))}
@@ -145,15 +149,4 @@ function FolderNode({ node, expandedIds, selectedPath, onToggle, onSelect, keybo
       )}
     </div>
   )
-}
-
-export function findNodeByPath(root: FileTreeNode, path: string): FileTreeNode | null {
-  if (root.path === path) return root
-  if (root.children) {
-    for (const child of root.children) {
-      const found = findNodeByPath(child, path)
-      if (found) return found
-    }
-  }
-  return null
 }

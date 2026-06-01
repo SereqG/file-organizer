@@ -3,21 +3,21 @@
 import { useCallback } from 'react'
 import { Handle, Position, useReactFlow } from '@xyflow/react'
 import type { Node, NodeProps } from '@xyflow/react'
-import type { CreateFolderNode as CreateFolderNodeType } from '@/lib/types/workflow'
+import type { RenameFolderNode as RenameFolderNodeType } from '@/lib/types/workflow'
 import { useNodeConfig } from '@/lib/contexts/NodeConfigContext'
-import { LuTrash2, LuFolderPlus } from 'react-icons/lu'
+import { LuTrash2, LuFolderPen } from 'react-icons/lu'
 
-export interface CreateFolderNodeData extends Record<string, unknown> {
+export interface RenameFolderNodeData extends Record<string, unknown> {
   label: string
-  config?: CreateFolderNodeType['config']
+  config?: RenameFolderNodeType['config']
   executionError?: string
 }
 
-export type CreateFolderRFNode = Node<CreateFolderNodeData, 'createFolder'>
+export type RenameFolderRFNode = Node<RenameFolderNodeData, 'renameFolder'>
 
-export function CreateFolderNode({ id, data }: NodeProps<CreateFolderRFNode>) {
+export function RenameFolderNode({ id, data }: NodeProps<RenameFolderRFNode>) {
   const { deleteElements } = useReactFlow()
-  const { openCreateFolderNodeConfig } = useNodeConfig()
+  const { openRenameFolderNodeConfig } = useNodeConfig()
 
   const handleDelete = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
@@ -25,17 +25,17 @@ export function CreateFolderNode({ id, data }: NodeProps<CreateFolderRFNode>) {
   }, [id, deleteElements])
 
   const handleOpen = useCallback(() => {
-    openCreateFolderNodeConfig(id)
-  }, [id, openCreateFolderNodeConfig])
+    openRenameFolderNodeConfig(id)
+  }, [id, openRenameFolderNodeConfig])
 
-  const folderName = data.config?.folderName
-  const configured = !!(folderName && data.config?.parentFolderPath)
+  const newName = data.config?.newName
+  const configured = !!(data.config?.folderPath && newName)
   const hasError = !!data.executionError
 
   return (
     <div
       onClick={handleOpen}
-      className={`relative flex items-center gap-2.5 rounded-lg border bg-[#111] px-3 py-2.5 shadow-lg min-w-40 cursor-pointer transition-colors ${hasError ? 'border-red-500/70 hover:border-red-500' : 'border-sky-500/40 hover:border-sky-500/70'}`}
+      className={`relative flex items-center gap-2.5 rounded-lg border bg-[#111] px-3 py-2.5 shadow-lg min-w-40 cursor-pointer transition-colors ${hasError ? 'border-red-500/70 hover:border-red-500' : 'border-amber-500/40 hover:border-amber-500/70'}`}
     >
       <button
         onClick={handleDelete}
@@ -45,14 +45,14 @@ export function CreateFolderNode({ id, data }: NodeProps<CreateFolderRFNode>) {
         <LuTrash2 size={10} />
       </button>
 
-      <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md border border-sky-500/30 bg-sky-500/10 text-sky-400">
-        <LuFolderPlus size={16} />
+      <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md border border-amber-500/30 bg-amber-500/10 text-amber-400">
+        <LuFolderPen size={16} />
       </span>
       <div className="flex flex-col gap-0.5">
-        <div className="text-[10px] uppercase tracking-wider text-sky-500/70 font-medium">Create</div>
+        <div className="text-[10px] uppercase tracking-wider text-amber-500/70 font-medium">Rename</div>
         <div className="text-xs text-white/80">{data.label}</div>
         <div className={`text-[9px] uppercase tracking-wider ${configured ? 'text-emerald-400/70' : 'text-rose-400/70'}`}>
-          {configured ? folderName : 'Not configured'}
+          {configured ? newName : 'Not configured'}
         </div>
         {hasError && (
           <div className="text-[9px] text-red-400/80 max-w-[140px] truncate" title={data.executionError}>
@@ -61,8 +61,8 @@ export function CreateFolderNode({ id, data }: NodeProps<CreateFolderRFNode>) {
         )}
       </div>
 
-      <Handle type="target" position={Position.Left} className="!border-sky-500/40 !bg-[#111]" />
-      <Handle type="source" position={Position.Right} className="!border-sky-500/40 !bg-[#111]" />
+      <Handle type="target" position={Position.Left} className="!border-amber-500/40 !bg-[#111]" />
+      <Handle type="source" position={Position.Right} className="!border-amber-500/40 !bg-[#111]" />
     </div>
   )
 }

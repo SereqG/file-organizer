@@ -1,9 +1,9 @@
 'use client'
 
 import type { FileTreeNode } from '@/lib/types/explore'
-import { FolderPicker } from './FolderPicker'
+import { FolderPicker } from '@/components/nodes/create_folder_node/FolderPicker'
 
-interface ParentFolderFieldProps {
+interface RenameTargetFieldProps {
   workspaceTree: FileTreeNode
   selectedPath: string
   selectedNode: FileTreeNode | null
@@ -11,11 +11,11 @@ interface ParentFolderFieldProps {
   error?: string
 }
 
-export function ParentFolderField({ workspaceTree, selectedPath, selectedNode, onSelect, error }: ParentFolderFieldProps) {
+export function RenameTargetField({ workspaceTree, selectedPath, selectedNode, onSelect, error }: RenameTargetFieldProps) {
   return (
     <div className="flex flex-col gap-1.5">
       <label className="text-xs text-white/60">
-        Parent folder
+        Folder to rename
       </label>
       <FolderPicker
         root={workspaceTree}

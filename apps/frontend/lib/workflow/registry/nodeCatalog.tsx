@@ -1,4 +1,4 @@
-import { LuMousePointer2, LuClock, LuGitBranch, LuFolderPlus } from 'react-icons/lu'
+import { LuMousePointer2, LuClock, LuGitBranch, LuFolderPlus, LuFolderX, LuFolderPen } from 'react-icons/lu'
 import type { NodeKind } from '@/lib/types/workflowNodeDescriptor'
 import type React from 'react'
 
@@ -47,13 +47,25 @@ export const NODE_CATEGORIES: NodeCategory[] = [
     ],
   },
   {
-    name: 'Create',
+    name: 'Folders',
     nodes: [
       {
         kind: 'create',
         nodeType: 'createFolder',
         label: 'Create Folder',
         icon: <LuFolderPlus size={14} />,
+      },
+      {
+        kind: 'create',
+        nodeType: 'deleteFolder',
+        label: 'Delete Folder',
+        icon: <LuFolderX size={14} />,
+      },
+      {
+        kind: 'create',
+        nodeType: 'renameFolder',
+        label: 'Rename Folder',
+        icon: <LuFolderPen size={14} />,
       },
     ],
   },

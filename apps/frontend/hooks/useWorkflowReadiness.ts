@@ -2,6 +2,8 @@ import { useMemo } from 'react'
 import type { WorkflowDefinition } from '@/lib/types/workflow'
 import { validateIfConfig } from '@/lib/workflow/validation/validateIfConfig'
 import { validateCreateFolderConfig } from '@/lib/workflow/validation/validateCreateFolderConfig'
+import { validateDeleteFolderConfig } from '@/lib/workflow/validation/validateDeleteFolderConfig'
+import { validateRenameFolderConfig } from '@/lib/workflow/validation/validateRenameFolderConfig'
 
 // Returns null when the workflow is ready to run, or a reason string when it is not.
 export function useWorkflowReadiness(definition: WorkflowDefinition | null): string | null {
@@ -15,10 +17,6 @@ export function useWorkflowReadiness(definition: WorkflowDefinition | null): str
       connectedIds.add(edge.target)
     }
 
-    console.log('Connected node IDs:', connectedIds)
-    console.log('Trigger node ID:', definition.trigger.id)
-    console.log("workflow definition:", definition)
-
     if (!connectedIds.has(definition.trigger.id)) return 'Connect the trigger to an action node'
 
     for (const node of definition.nodes) {
@@ -28,6 +26,12 @@ export function useWorkflowReadiness(definition: WorkflowDefinition | null): str
         return 'Some nodes have incomplete configuration'
       }
       if (node.type === 'createFolder' && !validateCreateFolderConfig(node.config).valid) {
+        return 'Some nodes have incomplete configuration'
+      }
+      if (node.type === 'deleteFolder' && !validateDeleteFolderConfig(node.config).valid) {
+        return 'Some nodes have incomplete configuration'
+      }
+      if (node.type === 'renameFolder' && !validateRenameFolderConfig(node.config).valid) {
         return 'Some nodes have incomplete configuration'
       }
     }

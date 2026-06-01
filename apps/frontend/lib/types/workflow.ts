@@ -15,6 +15,8 @@ export type WorkflowNodeType =
   | 'action'
   | 'if'
   | 'createFolder'
+  | 'deleteFolder'
+  | 'renameFolder'
   | 'loop'
   | 'transform';
 
@@ -119,12 +121,31 @@ export interface CreateFolderNode extends BaseGeneralNode {
   type: 'createFolder';
   config: {
     folderName: string;
-    parentFolderId: string;
+    parentFolderPath: string;
     ifExists: IfExists;
   };
 }
 
-export type WorkflowNode = IfNode | CreateFolderNode;
+export interface DeleteFolderNode extends BaseGeneralNode {
+  type: 'deleteFolder';
+  config: {
+    deleteAllEncountered: boolean;
+    folderPaths: string[];
+  };
+}
+
+export type RenameIfExists = 'fail' | 'rename_incrementally';
+
+export interface RenameFolderNode extends BaseGeneralNode {
+  type: 'renameFolder';
+  config: {
+    folderPath: string;
+    newName: string;
+    ifExists: RenameIfExists;
+  };
+}
+
+export type WorkflowNode = IfNode | CreateFolderNode | DeleteFolderNode | RenameFolderNode;
 
 export interface WorkflowItemStat {
   size: number;
@@ -182,4 +203,15 @@ export interface WorkflowDefinition {
   trigger: WorkflowTriggerNode;
   nodes: WorkflowNode[];
   edges: WorkflowEdge[];
+}
+
+export interface ExecutionFailedNode {
+  id: string;
+  error: string;
+}
+
+export interface ExecutionResult {
+  success: boolean;
+  error?: string;
+  failedNodes: ExecutionFailedNode[];
 }

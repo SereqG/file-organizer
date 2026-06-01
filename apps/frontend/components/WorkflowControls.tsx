@@ -16,10 +16,25 @@ const TRIGGER_LABELS: Record<TriggerId, string> = {
   schedule: 'Schedule',
 }
 
+function buildGeneralNode(id: string, entry: NodeDescriptor, position: { x: number; y: number }): AppNode | null {
+  switch (entry.nodeType) {
+    case 'if':
+      return { id, type: 'if', position, data: { label: entry.label, config: { conditions: { id: `group-${Date.now()}`, operator: 'AND' as const, children: [] } } } }
+    case 'createFolder':
+      return { id, type: 'createFolder', position, data: { label: entry.label } }
+    case 'deleteFolder':
+      return { id, type: 'deleteFolder', position, data: { label: entry.label } }
+    case 'renameFolder':
+      return { id, type: 'renameFolder', position, data: { label: entry.label } }
+    default:
+      return null
+  }
+}
+
 interface WorkflowControlsProps {
   hasTrigger: boolean
   onNodesChange: OnNodesChange<AppNode>
-  onTriggerAdded: (triggerId: TriggerId) => void
+  onTriggerAdded: (triggerId: TriggerId, rfNodeId: string) => void
   onGeneralNodeAdded: (id: string, nodeType: string, label: string) => void
   dropHandlerRef: React.MutableRefObject<((e: React.DragEvent<HTMLDivElement>) => void) | null>
 }
@@ -42,14 +57,13 @@ export function WorkflowControls({ hasTrigger, onNodesChange, onTriggerAdded, on
         data: { label: entry.label, triggerId },
       }
       onNodesChange([{ type: 'add', item: newNode }])
-      onTriggerAdded(triggerId)
+      onTriggerAdded(triggerId, newNode.id)
       return
     }
 
     const id = `${entry.nodeType}-${Date.now()}`
-    const newNode: AppNode = entry.nodeType === 'if'
-      ? { id, type: 'if', position, data: { label: entry.label, config: { conditions: { id: `group-${Date.now()}`, operator: 'AND' as const, children: [] } } } }
-      : { id, type: 'createFolder', position, data: { label: entry.label } }
+    const newNode = buildGeneralNode(id, entry, position)
+    if (!newNode) return
     onNodesChange([{ type: 'add', item: newNode }])
     onGeneralNodeAdded(id, entry.nodeType, entry.label)
   }, [hasTrigger, screenToFlowPosition, onNodesChange, onTriggerAdded, onGeneralNodeAdded])

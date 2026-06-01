@@ -1,33 +1,21 @@
 import type { CreateFolderNode } from '@/lib/types/workflow'
 import type { NodeValidationResult } from './types'
-
-const FORBIDDEN_CHARS = /[<>:"/\\|?*]/
-const RESERVED_WINDOWS = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i
-const MAX_NAME_LENGTH = 30
+import { validateFolderName } from './validateFolderName'
 
 export function validateCreateFolderConfig(
   config: Partial<CreateFolderNode['config']>
 ): NodeValidationResult {
   const fieldErrors: Record<string, string> = {}
 
-  const { folderName, parentFolderId, ifExists } = config
+  const { folderName, parentFolderPath, ifExists } = config
 
-  if (!folderName) {
-    fieldErrors.folderName = 'Folder name is required'
-  } else if (folderName.length > MAX_NAME_LENGTH) {
-    fieldErrors.folderName = `Folder name must be at most ${MAX_NAME_LENGTH} characters`
-  } else if (FORBIDDEN_CHARS.test(folderName)) {
-    fieldErrors.folderName = 'Folder name contains forbidden characters: < > : " / \\ | ? *'
-  } else if (folderName === '.' || folderName === '..' || folderName.startsWith('~/')) {
-    fieldErrors.folderName = 'Folder name contains a forbidden token'
-  } else if (folderName.endsWith(' ') || folderName.endsWith('.')) {
-    fieldErrors.folderName = 'Folder name must not end with a space or dot'
-  } else if (RESERVED_WINDOWS.test(folderName)) {
-    fieldErrors.folderName = 'Folder name is a reserved system name'
+  const folderNameError = validateFolderName(folderName)
+  if (folderNameError) {
+    fieldErrors.folderName = folderNameError
   }
 
-  if (!parentFolderId?.trim()) {
-    fieldErrors.parentFolderId = 'Parent folder ID is required'
+  if (!parentFolderPath?.trim()) {
+    fieldErrors.parentFolderPath = 'Parent folder is required'
   }
 
   if (!ifExists) {

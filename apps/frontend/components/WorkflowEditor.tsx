@@ -9,6 +9,8 @@ import { WorkspaceIndicator } from './WorkspaceIndicator'
 import { BottomControls } from './BottomControls'
 import { IfConfigModal } from './nodes/if_node/IfConfigModal'
 import { CreateFolderConfigModal } from './nodes/create_folder_node/CreateFolderConfigModal'
+import { DeleteFolderConfigModal } from './nodes/delete_folder_node/DeleteFolderConfigModal'
+import { RenameFolderConfigModal } from './nodes/rename_folder_node/RenameFolderConfigModal'
 import { WorkflowControls } from './WorkflowControls'
 
 interface WorkflowEditorProps {
@@ -27,6 +29,8 @@ export function WorkflowEditor({ workspacePath, workspaceTree }: WorkflowEditorP
     hasTrigger,
     editingIfNodeId,
     editingCreateFolderNodeId,
+    editingDeleteFolderNodeId,
+    editingRenameFolderNodeId,
     nodeConfigValue,
     onNodesChange,
     onEdgesChange,
@@ -37,8 +41,14 @@ export function WorkflowEditor({ workspacePath, workspaceTree }: WorkflowEditorP
     handleEdgesDelete,
     handleIfConfigSave,
     handleCreateFolderConfigSave,
+    handleDeleteFolderConfigSave,
+    handleRenameFolderConfigSave,
+    clearNodeErrors,
+    markFailedNodes,
     closeIfConfig,
     closeCreateFolderConfig,
+    closeDeleteFolderConfig,
+    closeRenameFolderConfig,
   } = useWorkflowEditor()
 
   if (!mounted) return null
@@ -73,7 +83,12 @@ export function WorkflowEditor({ workspacePath, workspaceTree }: WorkflowEditorP
             color="rgba(255, 255, 255, 0.4)"
             bgColor="#080808"
           />
-          <BottomControls definition={definition} rootPath={workspacePath} />
+          <BottomControls
+            definition={definition}
+            rootPath={workspacePath}
+            onRunStart={clearNodeErrors}
+            onRunComplete={markFailedNodes}
+          />
           <WorkflowControls
             hasTrigger={hasTrigger}
             onNodesChange={onNodesChange}
@@ -94,6 +109,22 @@ export function WorkflowEditor({ workspacePath, workspaceTree }: WorkflowEditorP
               workspaceTree={workspaceTree}
               onClose={closeCreateFolderConfig}
               onSave={handleCreateFolderConfigSave}
+            />
+          )}
+          {editingDeleteFolderNodeId && (
+            <DeleteFolderConfigModal
+              nodeId={editingDeleteFolderNodeId}
+              workspaceTree={workspaceTree}
+              onClose={closeDeleteFolderConfig}
+              onSave={handleDeleteFolderConfigSave}
+            />
+          )}
+          {editingRenameFolderNodeId && (
+            <RenameFolderConfigModal
+              nodeId={editingRenameFolderNodeId}
+              workspaceTree={workspaceTree}
+              onClose={closeRenameFolderConfig}
+              onSave={handleRenameFolderConfigSave}
             />
           )}
         </ReactFlow>
