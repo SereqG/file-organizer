@@ -1,4 +1,4 @@
-import { LuMousePointer2, LuClock, LuGitBranch, LuFolderPlus, LuFolderX, LuFolderPen } from 'react-icons/lu'
+import { LuMousePointer2, LuClock, LuGitBranch, LuSplit, LuFolderPlus, LuFolderX, LuFolderPen } from 'react-icons/lu'
 import type { NodeKind } from '@/lib/types/workflowNodeDescriptor'
 import type React from 'react'
 
@@ -43,6 +43,12 @@ export const NODE_CATEGORIES: NodeCategory[] = [
         nodeType: 'if',
         label: 'If',
         icon: <LuGitBranch size={14} />,
+      },
+      {
+        kind: 'general',
+        nodeType: 'switch',
+        label: 'Switch',
+        icon: <LuSplit size={14} />,
       },
     ],
   },

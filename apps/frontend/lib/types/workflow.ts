@@ -14,6 +14,7 @@ export type WorkflowNodeType =
   | 'schedule_trigger'
   | 'action'
   | 'if'
+  | 'switch'
   | 'createFolder'
   | 'deleteFolder'
   | 'renameFolder'
@@ -109,9 +110,24 @@ export interface IfNode extends BaseGeneralNode {
     conditions: ConditionGroup;
     missingFieldStrategy?: MissingFieldStrategy;
   };
-  outputs: {
-    true: string;
-    false: string;
+}
+
+// Output handle id for the switch node's always-present "everything else" branch. Distinct from
+// any case id (case ids come from nextId('case')), and mirrored by the backend BRANCH_DEFAULT.
+export const SWITCH_DEFAULT_HANDLE = 'default';
+export const MIN_SWITCH_CASES = 2;
+export const MAX_SWITCH_CASES = 8;
+
+export interface SwitchCase {
+  id: string;
+  conditions: ConditionGroup;
+}
+
+export interface SwitchNode extends BaseGeneralNode {
+  type: 'switch';
+  config: {
+    cases: SwitchCase[];
+    missingFieldStrategy?: MissingFieldStrategy;
   };
 }
 
@@ -145,7 +161,7 @@ export interface RenameFolderNode extends BaseGeneralNode {
   };
 }
 
-export type WorkflowNode = IfNode | CreateFolderNode | DeleteFolderNode | RenameFolderNode;
+export type WorkflowNode = IfNode | SwitchNode | CreateFolderNode | DeleteFolderNode | RenameFolderNode;
 
 export interface WorkflowItemStat {
   size: number;

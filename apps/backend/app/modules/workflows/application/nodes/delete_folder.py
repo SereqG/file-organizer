@@ -12,14 +12,16 @@ def _is_descendant(path: str, ancestor: str) -> bool:
     return path.startswith(ancestor + os.sep)
 
 
-def _resolve_targets(node: WorkflowNode, context: ExecutionContext) -> tuple[Optional[str], list[str]]:
+def _resolve_targets(node: WorkflowNode, context: ExecutionContext, scope: set[str]) -> tuple[Optional[str], list[str]]:
     config = node.config
 
     if config.get("deleteAllEncountered"):
+        # "Encountered" = the directories flowing into this node. With no upstream If node the
+        # scope is every scanned item, so this stays equivalent to deleting all directories.
         encountered = [
             item.path
             for item in context.items
-            if item.type == "directory" and item.path != context.root_path
+            if item.id in scope and item.type == "directory" and item.path != context.root_path
         ]
         return None, encountered
 
@@ -35,8 +37,8 @@ def _top_level_only(paths: list[str]) -> list[str]:
     return [p for p in unique if not any(p != other and _is_descendant(p, other) for other in unique)]
 
 
-def execute_delete_folder(node: WorkflowNode, context: ExecutionContext) -> tuple[Optional[str], Optional[Callable], Optional[Callable]]:
-    error, targets = _resolve_targets(node, context)
+def execute_delete_folder(node: WorkflowNode, context: ExecutionContext, scope: set[str]) -> tuple[Optional[str], Optional[Callable], Optional[Callable]]:
+    error, targets = _resolve_targets(node, context, scope)
     if error:
         return error, None, None
 

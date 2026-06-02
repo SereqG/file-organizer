@@ -1,11 +1,10 @@
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from typing import Any
+from typing import Any, Optional
 
 from app.modules.workflows.application.execute_workflow import execute_workflow as run_workflow
 from app.modules.workflows.application.scan_directory import scan_directory
-from app.modules.workflows.application.trace_workflow import trace_workflow
 from app.modules.workflows.domain.models import ExecutionContext, Workflow, WorkflowEdge, WorkflowNode, WorkflowTrigger
 
 router = APIRouter(prefix="/workflows/api", tags=["workflows"])
@@ -20,6 +19,7 @@ class WorkflowEdgeRequest(BaseModel):
     id: str
     source: str
     target: str
+    sourceHandle: Optional[str] = None
 
 
 class WorkflowNodeRequest(BaseModel):
@@ -59,12 +59,14 @@ def execute_workflow(body: ExecuteWorkflowRequest) -> dict:
 
     workflow = Workflow(
         nodes=[WorkflowNode(**n.model_dump()) for n in body.workflow.nodes],
-        edges=[WorkflowEdge(**e.model_dump()) for e in body.workflow.edges],
+        edges=[
+            WorkflowEdge(id=e.id, source=e.source, target=e.target, source_handle=e.sourceHandle)
+            for e in body.workflow.edges
+        ],
         trigger=WorkflowTrigger(**body.workflow.trigger.model_dump()),
     )
-    node_ids = trace_workflow(workflow)
 
-    result = run_workflow(workflow, node_ids, context)
+    result = run_workflow(workflow, context)
     if result.error:
         return JSONResponse(
             status_code=422,
@@ -82,6 +84,6 @@ def execute_workflow(body: ExecuteWorkflowRequest) -> dict:
         "variables": context.variables,
         "logs": context.logs,
         "outputs": context.outputs,
-        "nodeIds": node_ids,
+        "nodeIds": result.executed_node_ids,
         "failedNodes": [],
     }

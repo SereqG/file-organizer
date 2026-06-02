@@ -38,7 +38,8 @@ def _create_folder(path: Path, node_id: str, context: ExecutionContext) -> tuple
     return None, undo, None
 
 
-def execute_create_folder(node: WorkflowNode, context: ExecutionContext) -> tuple[Optional[str], Optional[Callable], Optional[Callable]]:
+def execute_create_folder(node: WorkflowNode, context: ExecutionContext, scope: set[str]) -> tuple[Optional[str], Optional[Callable], Optional[Callable]]:
+    # Create acts on an explicit configured path, so the incoming item scope does not constrain it.
     config = node.config
     folder_name: str = config.get("folderName", "")
     parent_folder_path: str = config.get("parentFolderPath", "")

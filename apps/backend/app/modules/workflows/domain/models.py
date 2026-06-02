@@ -9,6 +9,7 @@ class WorkflowEdge:
     id: str
     source: str
     target: str
+    source_handle: Optional[str] = None
 
 
 @dataclass
@@ -49,6 +50,15 @@ class WorkflowItem:
     size: Optional[int] = None
     created_at: Optional[datetime] = None
     modified_at: Optional[datetime] = None
+    accessed_at: Optional[datetime] = None
+    mime_type: Optional[str] = None
+    is_hidden: bool = False
+    is_executable: bool = False
+    is_readable: bool = False
+    is_writable: bool = False
+    is_empty: bool = False
+    children_count: int = 0
+    depth: int = 0
 
 
 @dataclass

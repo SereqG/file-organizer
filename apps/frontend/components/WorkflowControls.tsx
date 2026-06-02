@@ -10,6 +10,7 @@ import { TriggerSelectModal } from './TriggerSelectModal'
 import type { TriggerId } from './TriggerSelectModal'
 import type { NodeDescriptor } from '@/lib/types/workflowNodeDescriptor'
 import { decodeDragPayload, NODE_DRAG_TYPE } from './nodes/nodes_sidebar/dragPayload'
+import { initialSwitchCases } from '@/hooks/useWorkflowDefinition'
 
 const TRIGGER_LABELS: Record<TriggerId, string> = {
   manual: 'Manual Trigger',
@@ -20,6 +21,8 @@ function buildGeneralNode(id: string, entry: NodeDescriptor, position: { x: numb
   switch (entry.nodeType) {
     case 'if':
       return { id, type: 'if', position, data: { label: entry.label, config: { conditions: { id: `group-${Date.now()}`, operator: 'AND' as const, children: [] } } } }
+    case 'switch':
+      return { id, type: 'switch', position, data: { label: entry.label, config: { cases: initialSwitchCases(id) } } }
     case 'createFolder':
       return { id, type: 'createFolder', position, data: { label: entry.label } }
     case 'deleteFolder':

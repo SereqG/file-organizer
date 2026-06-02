@@ -8,6 +8,7 @@ import { NodeConfigContext } from '@/lib/contexts/NodeConfigContext'
 import { WorkspaceIndicator } from './WorkspaceIndicator'
 import { BottomControls } from './BottomControls'
 import { IfConfigModal } from './nodes/if_node/IfConfigModal'
+import { SwitchConfigModal } from './nodes/switch_node/SwitchConfigModal'
 import { CreateFolderConfigModal } from './nodes/create_folder_node/CreateFolderConfigModal'
 import { DeleteFolderConfigModal } from './nodes/delete_folder_node/DeleteFolderConfigModal'
 import { RenameFolderConfigModal } from './nodes/rename_folder_node/RenameFolderConfigModal'
@@ -28,6 +29,7 @@ export function WorkflowEditor({ workspacePath, workspaceTree }: WorkflowEditorP
     dropHandlerRef,
     hasTrigger,
     editingIfNodeId,
+    editingSwitchNodeId,
     editingCreateFolderNodeId,
     editingDeleteFolderNodeId,
     editingRenameFolderNodeId,
@@ -40,12 +42,14 @@ export function WorkflowEditor({ workspacePath, workspaceTree }: WorkflowEditorP
     handleConnect,
     handleEdgesDelete,
     handleIfConfigSave,
+    handleSwitchConfigSave,
     handleCreateFolderConfigSave,
     handleDeleteFolderConfigSave,
     handleRenameFolderConfigSave,
     clearNodeErrors,
     markFailedNodes,
     closeIfConfig,
+    closeSwitchConfig,
     closeCreateFolderConfig,
     closeDeleteFolderConfig,
     closeRenameFolderConfig,
@@ -101,6 +105,13 @@ export function WorkflowEditor({ workspacePath, workspaceTree }: WorkflowEditorP
               nodeId={editingIfNodeId}
               onClose={closeIfConfig}
               onSave={handleIfConfigSave}
+            />
+          )}
+          {editingSwitchNodeId && (
+            <SwitchConfigModal
+              nodeId={editingSwitchNodeId}
+              onClose={closeSwitchConfig}
+              onSave={handleSwitchConfigSave}
             />
           )}
           {editingCreateFolderNodeId && (

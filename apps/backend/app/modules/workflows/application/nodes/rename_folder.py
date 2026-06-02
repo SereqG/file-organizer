@@ -21,7 +21,8 @@ def _rewrite_paths(context: ExecutionContext, old_prefix: str, new_prefix: str) 
         item.parent_path = _rewrite_prefix(item.parent_path, old_prefix, new_prefix)
 
 
-def execute_rename_folder(node: WorkflowNode, context: ExecutionContext) -> tuple[Optional[str], Optional[Callable], Optional[Callable]]:
+def execute_rename_folder(node: WorkflowNode, context: ExecutionContext, scope: set[str]) -> tuple[Optional[str], Optional[Callable], Optional[Callable]]:
+    # Rename targets an explicit configured folder, so the incoming item scope does not constrain it.
     config = node.config
     folder_path: str = config.get("folderPath", "")
     new_name: str = config.get("newName", "")
