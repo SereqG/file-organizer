@@ -8,7 +8,9 @@ from app.modules.workflows.application.conditions.partition import (
     partition_switch,
 )
 from app.modules.workflows.application.nodes.create_folder import execute_create_folder
+from app.modules.workflows.application.nodes.delete_file import execute_delete_file
 from app.modules.workflows.application.nodes.delete_folder import execute_delete_folder
+from app.modules.workflows.application.nodes.rename_file import execute_rename_file
 from app.modules.workflows.application.nodes.rename_folder import execute_rename_folder
 from app.modules.workflows.domain.models import ExecutionContext, Workflow, WorkflowNode
 
@@ -41,6 +43,8 @@ _NODE_HANDLERS = {
     "createFolder": execute_create_folder,
     "deleteFolder": execute_delete_folder,
     "renameFolder": execute_rename_folder,
+    "deleteFile": execute_delete_file,
+    "renameFile": execute_rename_file,
 }
 
 

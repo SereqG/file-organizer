@@ -29,6 +29,10 @@ function buildGeneralNode(id: string, entry: NodeDescriptor, position: { x: numb
       return { id, type: 'deleteFolder', position, data: { label: entry.label } }
     case 'renameFolder':
       return { id, type: 'renameFolder', position, data: { label: entry.label } }
+    case 'deleteFile':
+      return { id, type: 'deleteFile', position, data: { label: entry.label } }
+    case 'renameFile':
+      return { id, type: 'renameFile', position, data: { label: entry.label } }
     default:
       return null
   }

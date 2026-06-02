@@ -12,6 +12,8 @@ import { SwitchConfigModal } from './nodes/switch_node/SwitchConfigModal'
 import { CreateFolderConfigModal } from './nodes/create_folder_node/CreateFolderConfigModal'
 import { DeleteFolderConfigModal } from './nodes/delete_folder_node/DeleteFolderConfigModal'
 import { RenameFolderConfigModal } from './nodes/rename_folder_node/RenameFolderConfigModal'
+import { DeleteFileConfigModal } from './nodes/delete_file_node/DeleteFileConfigModal'
+import { RenameFileConfigModal } from './nodes/rename_file_node/RenameFileConfigModal'
 import { WorkflowControls } from './WorkflowControls'
 
 interface WorkflowEditorProps {
@@ -33,6 +35,8 @@ export function WorkflowEditor({ workspacePath, workspaceTree }: WorkflowEditorP
     editingCreateFolderNodeId,
     editingDeleteFolderNodeId,
     editingRenameFolderNodeId,
+    editingDeleteFileNodeId,
+    editingRenameFileNodeId,
     nodeConfigValue,
     onNodesChange,
     onEdgesChange,
@@ -46,6 +50,8 @@ export function WorkflowEditor({ workspacePath, workspaceTree }: WorkflowEditorP
     handleCreateFolderConfigSave,
     handleDeleteFolderConfigSave,
     handleRenameFolderConfigSave,
+    handleDeleteFileConfigSave,
+    handleRenameFileConfigSave,
     clearNodeErrors,
     markFailedNodes,
     closeIfConfig,
@@ -53,6 +59,8 @@ export function WorkflowEditor({ workspacePath, workspaceTree }: WorkflowEditorP
     closeCreateFolderConfig,
     closeDeleteFolderConfig,
     closeRenameFolderConfig,
+    closeDeleteFileConfig,
+    closeRenameFileConfig,
   } = useWorkflowEditor()
 
   if (!mounted) return null
@@ -136,6 +144,22 @@ export function WorkflowEditor({ workspacePath, workspaceTree }: WorkflowEditorP
               workspaceTree={workspaceTree}
               onClose={closeRenameFolderConfig}
               onSave={handleRenameFolderConfigSave}
+            />
+          )}
+          {editingDeleteFileNodeId && (
+            <DeleteFileConfigModal
+              nodeId={editingDeleteFileNodeId}
+              workspaceTree={workspaceTree}
+              onClose={closeDeleteFileConfig}
+              onSave={handleDeleteFileConfigSave}
+            />
+          )}
+          {editingRenameFileNodeId && (
+            <RenameFileConfigModal
+              nodeId={editingRenameFileNodeId}
+              workspaceTree={workspaceTree}
+              onClose={closeRenameFileConfig}
+              onSave={handleRenameFileConfigSave}
             />
           )}
         </ReactFlow>

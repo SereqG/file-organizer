@@ -18,6 +18,8 @@ export type WorkflowNodeType =
   | 'createFolder'
   | 'deleteFolder'
   | 'renameFolder'
+  | 'deleteFile'
+  | 'renameFile'
   | 'loop'
   | 'transform';
 
@@ -161,7 +163,24 @@ export interface RenameFolderNode extends BaseGeneralNode {
   };
 }
 
-export type WorkflowNode = IfNode | SwitchNode | CreateFolderNode | DeleteFolderNode | RenameFolderNode;
+export interface DeleteFileNode extends BaseGeneralNode {
+  type: 'deleteFile';
+  config: {
+    deleteAllEncountered: boolean;
+    filePaths: string[];
+  };
+}
+
+export interface RenameFileNode extends BaseGeneralNode {
+  type: 'renameFile';
+  config: {
+    filePath: string;
+    newName: string;
+    ifExists: RenameIfExists;
+  };
+}
+
+export type WorkflowNode = IfNode | SwitchNode | CreateFolderNode | DeleteFolderNode | RenameFolderNode | DeleteFileNode | RenameFileNode;
 
 export interface WorkflowItemStat {
   size: number;

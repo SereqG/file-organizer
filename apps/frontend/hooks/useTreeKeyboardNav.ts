@@ -81,7 +81,7 @@ export function useTreeKeyboardNav({ root, expandedIds, onToggle, onSelect, filt
       case ' ':
         e.preventDefault()
         if (isSkipped) break
-        if (onSelect && isDir) {
+        if (onSelect && (!filter || filter(node))) {
           onSelect(node)
         } else if (isDir) {
           onToggle(node.id)

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNodesState, useEdgesState, addEdge } from '@xyflow/react'
 import type { Edge, Connection } from '@xyflow/react'
 import type { TriggerId } from '@/components/TriggerSelectModal'
-import type { CreateFolderNode as CreateFolderNodeType, DeleteFolderNode as DeleteFolderNodeType, ExecutionFailedNode, IfNode as IfNodeType, RenameFolderNode as RenameFolderNodeType, SwitchNode as SwitchNodeType } from '@/lib/types/workflow'
+import type { CreateFolderNode as CreateFolderNodeType, DeleteFileNode as DeleteFileNodeType, DeleteFolderNode as DeleteFolderNodeType, ExecutionFailedNode, IfNode as IfNodeType, RenameFileNode as RenameFileNodeType, RenameFolderNode as RenameFolderNodeType, SwitchNode as SwitchNodeType } from '@/lib/types/workflow'
 import { SWITCH_DEFAULT_HANDLE } from '@/lib/types/workflow'
 import { SWITCH_DEFAULT_COLOR, switchOutputColor } from '@/lib/workflow/utils/switchColors'
 import { useWorkflowDefinition } from '@/hooks/useWorkflowDefinition'
@@ -20,10 +20,14 @@ import { DeleteFolderNode } from '@/components/nodes/delete_folder_node/DeleteFo
 import type { DeleteFolderRFNode } from '@/components/nodes/delete_folder_node/DeleteFolderNode'
 import { RenameFolderNode } from '@/components/nodes/rename_folder_node/RenameFolderNode'
 import type { RenameFolderRFNode } from '@/components/nodes/rename_folder_node/RenameFolderNode'
+import { DeleteFileNode } from '@/components/nodes/delete_file_node/DeleteFileNode'
+import type { DeleteFileRFNode } from '@/components/nodes/delete_file_node/DeleteFileNode'
+import { RenameFileNode } from '@/components/nodes/rename_file_node/RenameFileNode'
+import type { RenameFileRFNode } from '@/components/nodes/rename_file_node/RenameFileNode'
 
-export type AppNode = TriggerRFNode | IfRFNode | SwitchRFNode | CreateFolderRFNode | DeleteFolderRFNode | RenameFolderRFNode
+export type AppNode = TriggerRFNode | IfRFNode | SwitchRFNode | CreateFolderRFNode | DeleteFolderRFNode | RenameFolderRFNode | DeleteFileRFNode | RenameFileRFNode
 
-const NODE_TYPES = { trigger: TriggerNode, if: IfNode, switch: SwitchNode, createFolder: CreateFolderNode, deleteFolder: DeleteFolderNode, renameFolder: RenameFolderNode }
+const NODE_TYPES = { trigger: TriggerNode, if: IfNode, switch: SwitchNode, createFolder: CreateFolderNode, deleteFolder: DeleteFolderNode, renameFolder: RenameFolderNode, deleteFile: DeleteFileNode, renameFile: RenameFileNode }
 
 // Color the edge leaving a switch output so the trace matches its handle. Returns undefined for
 // non-switch sources (default React Flow styling).
@@ -48,6 +52,8 @@ export function useWorkflowEditor() {
   const [editingCreateFolderNodeId, setEditingCreateFolderNodeId] = useState<string | null>(null)
   const [editingDeleteFolderNodeId, setEditingDeleteFolderNodeId] = useState<string | null>(null)
   const [editingRenameFolderNodeId, setEditingRenameFolderNodeId] = useState<string | null>(null)
+  const [editingDeleteFileNodeId, setEditingDeleteFileNodeId] = useState<string | null>(null)
+  const [editingRenameFileNodeId, setEditingRenameFileNodeId] = useState<string | null>(null)
 
   const {
     definition,
@@ -60,6 +66,8 @@ export function useWorkflowEditor() {
     updateCreateFolderNodeConfig,
     updateDeleteFolderNodeConfig,
     updateRenameFolderNodeConfig,
+    updateDeleteFileNodeConfig,
+    updateRenameFileNodeConfig,
     addWorkflowEdge,
     removeWorkflowEdge,
   } = useWorkflowDefinition()
@@ -101,6 +109,8 @@ export function useWorkflowEditor() {
     openCreateFolderNodeConfig: (id: string) => setEditingCreateFolderNodeId(id),
     openDeleteFolderNodeConfig: (id: string) => setEditingDeleteFolderNodeId(id),
     openRenameFolderNodeConfig: (id: string) => setEditingRenameFolderNodeId(id),
+    openDeleteFileNodeConfig: (id: string) => setEditingDeleteFileNodeId(id),
+    openRenameFileNodeConfig: (id: string) => setEditingRenameFileNodeId(id),
   }), [])
 
   const handleIfConfigSave = useCallback((config: IfNodeType['config']) => {
@@ -158,6 +168,22 @@ export function useWorkflowEditor() {
     updateRenameFolderNodeConfig(editingRenameFolderNodeId, config)
   }, [editingRenameFolderNodeId, setNodes, updateRenameFolderNodeConfig])
 
+  const handleDeleteFileConfigSave = useCallback((config: DeleteFileNodeType['config']) => {
+    if (!editingDeleteFileNodeId) return
+    setNodes((prev) => prev.map((n) =>
+      n.id === editingDeleteFileNodeId ? { ...n, data: { ...n.data, config } } as AppNode : n
+    ))
+    updateDeleteFileNodeConfig(editingDeleteFileNodeId, config)
+  }, [editingDeleteFileNodeId, setNodes, updateDeleteFileNodeConfig])
+
+  const handleRenameFileConfigSave = useCallback((config: RenameFileNodeType['config']) => {
+    if (!editingRenameFileNodeId) return
+    setNodes((prev) => prev.map((n) =>
+      n.id === editingRenameFileNodeId ? { ...n, data: { ...n.data, config } } as AppNode : n
+    ))
+    updateRenameFileNodeConfig(editingRenameFileNodeId, config)
+  }, [editingRenameFileNodeId, setNodes, updateRenameFileNodeConfig])
+
   const clearNodeErrors = useCallback(() => {
     setNodes((prev) => prev.map((n) =>
       n.data.executionError ? { ...n, data: { ...n.data, executionError: undefined } } as AppNode : n
@@ -188,6 +214,8 @@ export function useWorkflowEditor() {
     editingCreateFolderNodeId,
     editingDeleteFolderNodeId,
     editingRenameFolderNodeId,
+    editingDeleteFileNodeId,
+    editingRenameFileNodeId,
     nodeConfigValue,
     onNodesChange,
     onEdgesChange,
@@ -201,6 +229,8 @@ export function useWorkflowEditor() {
     handleCreateFolderConfigSave,
     handleDeleteFolderConfigSave,
     handleRenameFolderConfigSave,
+    handleDeleteFileConfigSave,
+    handleRenameFileConfigSave,
     clearNodeErrors,
     markFailedNodes,
     closeIfConfig: () => setEditingIfNodeId(null),
@@ -208,5 +238,7 @@ export function useWorkflowEditor() {
     closeCreateFolderConfig: () => setEditingCreateFolderNodeId(null),
     closeDeleteFolderConfig: () => setEditingDeleteFolderNodeId(null),
     closeRenameFolderConfig: () => setEditingRenameFolderNodeId(null),
+    closeDeleteFileConfig: () => setEditingDeleteFileNodeId(null),
+    closeRenameFileConfig: () => setEditingRenameFileNodeId(null),
   }
 }
