@@ -10,6 +10,7 @@ import { LuTrash2, LuGitBranch } from 'react-icons/lu'
 export interface IfNodeData extends Record<string, unknown> {
   label: string
   config?: IfNodeType['config']
+  executionError?: string
 }
 
 export type IfRFNode = Node<IfNodeData, 'if'>
@@ -38,11 +39,12 @@ export function IfNode({ id, data }: NodeProps<IfRFNode>) {
 
   const conditionCount = data.config ? countConditions(data.config.conditions) : 0
   const configured = conditionCount > 0
+  const hasError = !!data.executionError
 
   return (
     <div
       onClick={handleOpen}
-      className="relative flex items-center gap-2.5 rounded-lg border border-orange-500/40 bg-[#111] px-3 py-2.5 pr-8 shadow-lg min-w-40 cursor-pointer transition-colors hover:border-orange-500/70"
+      className={`relative flex items-center gap-2.5 rounded-lg border bg-[#111] px-3 py-2.5 pr-8 shadow-lg min-w-40 cursor-pointer transition-colors ${hasError ? 'border-red-500/70 hover:border-red-500' : 'border-orange-500/40 hover:border-orange-500/70'}`}
     >
       <button
         onClick={handleDelete}
@@ -61,6 +63,11 @@ export function IfNode({ id, data }: NodeProps<IfRFNode>) {
         <div className={`text-[9px] uppercase tracking-wider ${configured ? 'text-emerald-400/70' : 'text-rose-400/70'}`}>
           {configured ? `${conditionCount} ${conditionCount === 1 ? 'condition' : 'conditions'}` : 'Not configured'}
         </div>
+        {hasError && (
+          <div className="text-[9px] text-red-400/80 max-w-[140px] truncate" title={data.executionError}>
+            {data.executionError}
+          </div>
+        )}
       </div>
 
       <Handle

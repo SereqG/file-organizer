@@ -5,11 +5,11 @@ import { useReactFlow } from '@xyflow/react'
 import type { CreateFolderNode, IfExists } from '@/lib/types/workflow'
 import type { FileTreeNode } from '@/lib/types/explore'
 import { validateCreateFolderConfig } from '@/lib/workflow/validation/validateCreateFolderConfig'
-import { findNodeById } from '@/components/nodes/create_folder_node/FolderPicker'
+import { findNodeByPath } from '@/components/nodes/create_folder_node/FolderPicker'
 
 const EMPTY_CONFIG: CreateFolderNode['config'] = {
   folderName: '',
-  parentFolderId: '',
+  parentFolderPath: '',
   ifExists: 'reuse_existing',
 }
 
@@ -30,30 +30,30 @@ export function useCreateFolderConfig({ nodeId, workspaceTree, onSave, onClose }
   }, [getNode, nodeId])
 
   const [folderName, setFolderName] = useState(initial.folderName)
-  const [parentFolderId, setParentFolderId] = useState(initial.parentFolderId)
+  const [parentFolderPath, setParentFolderPath] = useState(initial.parentFolderPath)
   const [ifExists, setIfExists] = useState<IfExists>(initial.ifExists)
 
   const selectedParentNode = useMemo(
-    () => (parentFolderId ? findNodeById(workspaceTree, parentFolderId) : null),
-    [workspaceTree, parentFolderId]
+    () => (parentFolderPath ? findNodeByPath(workspaceTree, parentFolderPath) : null),
+    [workspaceTree, parentFolderPath]
   )
 
   const validation = useMemo(
-    () => validateCreateFolderConfig({ folderName, parentFolderId, ifExists }),
-    [folderName, parentFolderId, ifExists]
+    () => validateCreateFolderConfig({ folderName, parentFolderPath, ifExists }),
+    [folderName, parentFolderPath, ifExists]
   )
 
   const handleSave = () => {
     if (!validation.valid) return
-    onSave({ folderName, parentFolderId, ifExists })
+    onSave({ folderName, parentFolderPath, ifExists })
     onClose()
   }
 
   return {
     folderName,
     setFolderName,
-    parentFolderId,
-    setParentFolderId,
+    parentFolderPath,
+    setParentFolderPath,
     ifExists,
     setIfExists,
     selectedParentNode,

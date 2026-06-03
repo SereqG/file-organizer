@@ -22,7 +22,7 @@ interface CreateFolderConfigModalProps {
 export function CreateFolderConfigModal({ nodeId, workspaceTree, onClose, onSave }: CreateFolderConfigModalProps) {
   const {
     folderName, setFolderName,
-    parentFolderId, setParentFolderId,
+    parentFolderPath, setParentFolderPath,
     ifExists, setIfExists,
     selectedParentNode,
     validation,
@@ -56,10 +56,12 @@ export function CreateFolderConfigModal({ nodeId, workspaceTree, onClose, onSave
             />
             <ParentFolderField
               workspaceTree={workspaceTree}
-              selectedId={parentFolderId}
+              selectedPath={parentFolderPath}
               selectedNode={selectedParentNode}
-              onSelect={(node) => setParentFolderId(node.id)}
-              error={validation.fieldErrors.parentFolderId}
+              onSelect={(node) => {
+                setParentFolderPath(node.path)
+              }}
+              error={validation.fieldErrors.parentFolderPath}
             />
             <IfExistsField
               value={ifExists}

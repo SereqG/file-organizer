@@ -4,7 +4,14 @@ import { createContext, useContext } from 'react'
 
 export interface NodeConfigContextValue {
   openIfNodeConfig: (nodeId: string) => void
+  openSwitchNodeConfig: (nodeId: string) => void
   openCreateFolderNodeConfig: (nodeId: string) => void
+  openDeleteFolderNodeConfig: (nodeId: string) => void
+  openRenameFolderNodeConfig: (nodeId: string) => void
+  openDeleteFileNodeConfig: (nodeId: string) => void
+  openRenameFileNodeConfig: (nodeId: string) => void
+  openMoveNodeConfig: (nodeId: string) => void
+  openCopyNodeConfig: (nodeId: string) => void
 }
 
 export const NodeConfigContext = createContext<NodeConfigContextValue | null>(null)

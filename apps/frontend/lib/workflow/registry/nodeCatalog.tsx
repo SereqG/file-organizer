@@ -1,4 +1,4 @@
-import { LuMousePointer2, LuClock, LuGitBranch, LuFolderPlus } from 'react-icons/lu'
+import { LuMousePointer2, LuClock, LuGitBranch, LuSplit, LuFolderPlus, LuFolderX, LuFolderPen, LuFileX, LuFilePen, LuFolderInput, LuFileInput, LuCopy, LuCopyPlus } from 'react-icons/lu'
 import type { NodeKind } from '@/lib/types/workflowNodeDescriptor'
 import type React from 'react'
 
@@ -44,16 +44,80 @@ export const NODE_CATEGORIES: NodeCategory[] = [
         label: 'If',
         icon: <LuGitBranch size={14} />,
       },
+      {
+        kind: 'general',
+        nodeType: 'switch',
+        label: 'Switch',
+        icon: <LuSplit size={14} />,
+      },
     ],
   },
   {
-    name: 'Create',
+    name: 'Folders',
     nodes: [
       {
         kind: 'create',
         nodeType: 'createFolder',
         label: 'Create Folder',
         icon: <LuFolderPlus size={14} />,
+      },
+      {
+        kind: 'create',
+        nodeType: 'deleteFolder',
+        label: 'Delete Folder',
+        icon: <LuFolderX size={14} />,
+      },
+      {
+        kind: 'create',
+        nodeType: 'renameFolder',
+        label: 'Rename Folder',
+        icon: <LuFolderPen size={14} />,
+      },
+    ],
+  },
+  {
+    name: 'Files',
+    nodes: [
+      {
+        kind: 'create',
+        nodeType: 'deleteFile',
+        label: 'Delete File',
+        icon: <LuFileX size={14} />,
+      },
+      {
+        kind: 'create',
+        nodeType: 'renameFile',
+        label: 'Rename File',
+        icon: <LuFilePen size={14} />,
+      },
+    ],
+  },
+  {
+    name: 'Transfer',
+    nodes: [
+      {
+        kind: 'create',
+        nodeType: 'moveFolder',
+        label: 'Move Folder',
+        icon: <LuFolderInput size={14} />,
+      },
+      {
+        kind: 'create',
+        nodeType: 'moveFile',
+        label: 'Move File',
+        icon: <LuFileInput size={14} />,
+      },
+      {
+        kind: 'create',
+        nodeType: 'copyFolder',
+        label: 'Copy Folder',
+        icon: <LuCopy size={14} />,
+      },
+      {
+        kind: 'create',
+        nodeType: 'copyFile',
+        label: 'Copy File',
+        icon: <LuCopyPlus size={14} />,
       },
     ],
   },

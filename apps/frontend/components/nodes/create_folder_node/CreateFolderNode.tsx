@@ -10,6 +10,7 @@ import { LuTrash2, LuFolderPlus } from 'react-icons/lu'
 export interface CreateFolderNodeData extends Record<string, unknown> {
   label: string
   config?: CreateFolderNodeType['config']
+  executionError?: string
 }
 
 export type CreateFolderRFNode = Node<CreateFolderNodeData, 'createFolder'>
@@ -28,12 +29,13 @@ export function CreateFolderNode({ id, data }: NodeProps<CreateFolderRFNode>) {
   }, [id, openCreateFolderNodeConfig])
 
   const folderName = data.config?.folderName
-  const configured = !!(folderName && data.config?.parentFolderId)
+  const configured = !!(folderName && data.config?.parentFolderPath)
+  const hasError = !!data.executionError
 
   return (
     <div
       onClick={handleOpen}
-      className="relative flex items-center gap-2.5 rounded-lg border border-sky-500/40 bg-[#111] px-3 py-2.5 shadow-lg min-w-40 cursor-pointer transition-colors hover:border-sky-500/70"
+      className={`relative flex items-center gap-2.5 rounded-lg border bg-[#111] px-3 py-2.5 shadow-lg min-w-40 cursor-pointer transition-colors ${hasError ? 'border-red-500/70 hover:border-red-500' : 'border-sky-500/40 hover:border-sky-500/70'}`}
     >
       <button
         onClick={handleDelete}
@@ -52,6 +54,11 @@ export function CreateFolderNode({ id, data }: NodeProps<CreateFolderRFNode>) {
         <div className={`text-[9px] uppercase tracking-wider ${configured ? 'text-emerald-400/70' : 'text-rose-400/70'}`}>
           {configured ? folderName : 'Not configured'}
         </div>
+        {hasError && (
+          <div className="text-[9px] text-red-400/80 max-w-[140px] truncate" title={data.executionError}>
+            {data.executionError}
+          </div>
+        )}
       </div>
 
       <Handle type="target" position={Position.Left} className="!border-sky-500/40 !bg-[#111]" />

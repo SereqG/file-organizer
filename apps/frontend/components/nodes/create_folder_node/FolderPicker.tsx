@@ -9,11 +9,11 @@ const directoryFilter = (n: FileTreeNode) => n.type === 'directory'
 
 interface FolderPickerProps {
   root: FileTreeNode
-  selectedId: string | null
+  selectedPath: string | null
   onSelect: (node: FileTreeNode) => void
 }
 
-export function FolderPicker({ root, selectedId, onSelect }: FolderPickerProps) {
+export function FolderPicker({ root, selectedPath, onSelect }: FolderPickerProps) {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => initialExpandedIds(root))
 
   function toggle(id: string) {
@@ -42,7 +42,7 @@ export function FolderPicker({ root, selectedId, onSelect }: FolderPickerProps) 
       <FolderNode
         node={root}
         expandedIds={expandedIds}
-        selectedId={selectedId}
+        selectedPath={selectedPath}
         onToggle={toggle}
         onSelect={onSelect}
         keyboardNav={keyboardNav}
@@ -56,17 +56,17 @@ type KeyboardNav = ReturnType<typeof useTreeKeyboardNav>
 interface FolderNodeProps {
   node: FileTreeNode
   expandedIds: Set<string>
-  selectedId: string | null
+  selectedPath: string | null
   onToggle: (id: string) => void
   onSelect: (node: FileTreeNode) => void
   keyboardNav: KeyboardNav
 }
 
-function FolderNode({ node, expandedIds, selectedId, onToggle, onSelect, keyboardNav }: FolderNodeProps) {
+function FolderNode({ node, expandedIds, selectedPath, onToggle, onSelect, keyboardNav }: FolderNodeProps) {
   if (node.type !== 'directory') return null
 
   const isExpanded = expandedIds.has(node.id)
-  const isSelected = node.id === selectedId
+  const isSelected = node.path === selectedPath
   const isSkipped = node.skipped === true
   const indent = node.level * 16
   const hasChildren = node.children?.some(c => c.type === 'directory') ?? false
@@ -135,7 +135,7 @@ function FolderNode({ node, expandedIds, selectedId, onToggle, onSelect, keyboar
               key={child.id}
               node={child}
               expandedIds={expandedIds}
-              selectedId={selectedId}
+              selectedPath={selectedPath}
               onToggle={onToggle}
               onSelect={onSelect}
               keyboardNav={keyboardNav}
@@ -147,11 +147,11 @@ function FolderNode({ node, expandedIds, selectedId, onToggle, onSelect, keyboar
   )
 }
 
-export function findNodeById(root: FileTreeNode, id: string): FileTreeNode | null {
-  if (root.id === id) return root
+export function findNodeByPath(root: FileTreeNode, path: string): FileTreeNode | null {
+  if (root.path === path) return root
   if (root.children) {
     for (const child of root.children) {
-      const found = findNodeById(child, id)
+      const found = findNodeByPath(child, path)
       if (found) return found
     }
   }

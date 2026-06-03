@@ -5,13 +5,13 @@ import { FolderPicker } from './FolderPicker'
 
 interface ParentFolderFieldProps {
   workspaceTree: FileTreeNode
-  selectedId: string
+  selectedPath: string
   selectedNode: FileTreeNode | null
   onSelect: (node: FileTreeNode) => void
   error?: string
 }
 
-export function ParentFolderField({ workspaceTree, selectedId, selectedNode, onSelect, error }: ParentFolderFieldProps) {
+export function ParentFolderField({ workspaceTree, selectedPath, selectedNode, onSelect, error }: ParentFolderFieldProps) {
   return (
     <div className="flex flex-col gap-1.5">
       <label className="text-xs text-white/60">
@@ -19,7 +19,7 @@ export function ParentFolderField({ workspaceTree, selectedId, selectedNode, onS
       </label>
       <FolderPicker
         root={workspaceTree}
-        selectedId={selectedId || null}
+        selectedPath={selectedPath || null}
         onSelect={onSelect}
       />
       {selectedNode ? (
