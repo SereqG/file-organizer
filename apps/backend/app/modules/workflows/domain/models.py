@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 from uuid import UUID, uuid4
-from typing import Any, Literal, Optional
+from typing import Any, Callable, Literal, Optional
 
 
 @dataclass
@@ -62,6 +62,31 @@ class WorkflowItem:
 
 
 @dataclass
+class ExecutionWarning:
+    """A non-fatal, per-item notice raised by a node. Warnings never abort a run; they are
+    collected on the context and surfaced alongside the result. See ``warning_codes`` for ``code``."""
+
+    node_id: str
+    code: str
+    message: str
+    item_path: Optional[str] = None
+    target_path: Optional[str] = None
+
+
+@dataclass
+class PlannedAction:
+    """One filesystem operation a node will perform. Recorded by every action node (in both real
+    and dry-run mode); the dry-run preview surfaces these so the user sees what a run will do before
+    any disk writes happen. ``kind`` is one of: create, delete, rename, reuse, move, copy, skip."""
+
+    node_id: str
+    kind: str
+    description: str
+    item_path: Optional[str] = None
+    target_path: Optional[str] = None
+
+
+@dataclass
 class ExecutionContext:
     execution_id: UUID = field(default_factory=uuid4)
     started_at: datetime = field(default_factory=datetime.utcnow)
@@ -70,3 +95,15 @@ class ExecutionContext:
     variables: dict[str, Any] = field(default_factory=dict)
     logs: list[Any] = field(default_factory=list)
     outputs: dict[str, Any] = field(default_factory=dict)
+    warnings: list[ExecutionWarning] = field(default_factory=list)
+    actions: list[PlannedAction] = field(default_factory=list)
+    # Path remaps a Move produced ({"oldPath", "newPath"}). The engine applies new ones to
+    # not-yet-executed nodes' configs in-run, and the API returns them so the canvas can update.
+    config_remaps: list[dict] = field(default_factory=list)
+    # When true, nodes skip the actual disk syscalls but still mutate the item tree and record
+    # their PlannedAction, so the engine can produce a faithful preview without touching disk.
+    dry_run: bool = False
+    # Optional hook injected by the resumable runner. A node that needs the user to resolve a
+    # collision calls ``request_decision(payload) -> decision``; it blocks until the user responds
+    # (or raises if the run is cancelled). ``None`` for synchronous/dry runs — nodes use defaults.
+    request_decision: Optional[Callable[[dict], dict]] = None

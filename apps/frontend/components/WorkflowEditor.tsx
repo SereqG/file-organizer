@@ -14,6 +14,8 @@ import { DeleteFolderConfigModal } from './nodes/delete_folder_node/DeleteFolder
 import { RenameFolderConfigModal } from './nodes/rename_folder_node/RenameFolderConfigModal'
 import { DeleteFileConfigModal } from './nodes/delete_file_node/DeleteFileConfigModal'
 import { RenameFileConfigModal } from './nodes/rename_file_node/RenameFileConfigModal'
+import { MoveConfigModal } from './nodes/move_node/MoveConfigModal'
+import { CopyConfigModal } from './nodes/copy_node/CopyConfigModal'
 import { WorkflowControls } from './WorkflowControls'
 
 interface WorkflowEditorProps {
@@ -37,6 +39,8 @@ export function WorkflowEditor({ workspacePath, workspaceTree }: WorkflowEditorP
     editingRenameFolderNodeId,
     editingDeleteFileNodeId,
     editingRenameFileNodeId,
+    editingMoveNodeId,
+    editingCopyNodeId,
     nodeConfigValue,
     onNodesChange,
     onEdgesChange,
@@ -52,6 +56,9 @@ export function WorkflowEditor({ workspacePath, workspaceTree }: WorkflowEditorP
     handleRenameFolderConfigSave,
     handleDeleteFileConfigSave,
     handleRenameFileConfigSave,
+    handleMoveConfigSave,
+    handleCopyConfigSave,
+    applyConfigRemapToCanvas,
     clearNodeErrors,
     markFailedNodes,
     closeIfConfig,
@@ -61,6 +68,8 @@ export function WorkflowEditor({ workspacePath, workspaceTree }: WorkflowEditorP
     closeRenameFolderConfig,
     closeDeleteFileConfig,
     closeRenameFileConfig,
+    closeMoveConfig,
+    closeCopyConfig,
   } = useWorkflowEditor()
 
   if (!mounted) return null
@@ -100,6 +109,7 @@ export function WorkflowEditor({ workspacePath, workspaceTree }: WorkflowEditorP
             rootPath={workspacePath}
             onRunStart={clearNodeErrors}
             onRunComplete={markFailedNodes}
+            onConfigRemap={applyConfigRemapToCanvas}
           />
           <WorkflowControls
             hasTrigger={hasTrigger}
@@ -160,6 +170,22 @@ export function WorkflowEditor({ workspacePath, workspaceTree }: WorkflowEditorP
               workspaceTree={workspaceTree}
               onClose={closeRenameFileConfig}
               onSave={handleRenameFileConfigSave}
+            />
+          )}
+          {editingMoveNodeId && (
+            <MoveConfigModal
+              nodeId={editingMoveNodeId}
+              workspaceTree={workspaceTree}
+              onClose={closeMoveConfig}
+              onSave={handleMoveConfigSave}
+            />
+          )}
+          {editingCopyNodeId && (
+            <CopyConfigModal
+              nodeId={editingCopyNodeId}
+              workspaceTree={workspaceTree}
+              onClose={closeCopyConfig}
+              onSave={handleCopyConfigSave}
             />
           )}
         </ReactFlow>

@@ -8,7 +8,7 @@ from app.modules.workflows.application.nodes.folder_helpers import (
     find_directory_item_by_path,
     resolve_incremental_name,
 )
-from app.modules.workflows.domain.models import ExecutionContext, WorkflowItem, WorkflowNode
+from app.modules.workflows.domain.models import ExecutionContext, PlannedAction, WorkflowItem, WorkflowNode
 
 
 def _make_workflow_item(path: Path) -> WorkflowItem:
@@ -22,14 +22,18 @@ def _make_workflow_item(path: Path) -> WorkflowItem:
 
 
 def _create_folder(path: Path, node_id: str, context: ExecutionContext) -> tuple[Optional[str], Optional[Callable], Optional[Callable]]:
-    try:
-        os.makedirs(path)
-    except OSError:
-        return f"Failed to create folder {path}.", None, None
+    if not context.dry_run:
+        try:
+            os.makedirs(path)
+        except OSError:
+            return f"Failed to create folder {path}.", None, None
 
     item = _make_workflow_item(path)
     context.items.append(item)
     context.outputs[node_id] = item
+    context.actions.append(
+        PlannedAction(node_id=node_id, kind="create", description=f"Create folder {path}", target_path=str(path))
+    )
 
     def undo():
         shutil.rmtree(path, ignore_errors=True)
@@ -60,6 +64,9 @@ def execute_create_folder(node: WorkflowNode, context: ExecutionContext, scope: 
             _make_workflow_item(target_path),
         )
         context.outputs[node.id] = existing
+        context.actions.append(
+            PlannedAction(node.id, "reuse", f"Reuse existing folder {target_path}", target_path=str(target_path))
+        )
         return None, None, None
 
     if if_exists == "rename_incrementally":
@@ -67,10 +74,11 @@ def execute_create_folder(node: WorkflowNode, context: ExecutionContext, scope: 
         return _create_folder(new_path, node.id, context)
 
     if if_exists == "overwrite":
-        try:
-            shutil.rmtree(target_path)
-        except OSError:
-            return f"Failed to overwrite folder {target_path}.", None, None
+        if not context.dry_run:
+            try:
+                shutil.rmtree(target_path)
+            except OSError:
+                return f"Failed to overwrite folder {target_path}.", None, None
         return _create_folder(target_path, node.id, context)
 
     return f"Folder {target_path} already exists.", None, None

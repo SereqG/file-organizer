@@ -10,6 +10,8 @@ export interface NodeConfigContextValue {
   openRenameFolderNodeConfig: (nodeId: string) => void
   openDeleteFileNodeConfig: (nodeId: string) => void
   openRenameFileNodeConfig: (nodeId: string) => void
+  openMoveNodeConfig: (nodeId: string) => void
+  openCopyNodeConfig: (nodeId: string) => void
 }
 
 export const NodeConfigContext = createContext<NodeConfigContextValue | null>(null)

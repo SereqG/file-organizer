@@ -1,4 +1,4 @@
-import { LuMousePointer2, LuClock, LuGitBranch, LuSplit, LuFolderPlus, LuFolderX, LuFolderPen, LuFileX, LuFilePen } from 'react-icons/lu'
+import { LuMousePointer2, LuClock, LuGitBranch, LuSplit, LuFolderPlus, LuFolderX, LuFolderPen, LuFileX, LuFilePen, LuFolderInput, LuFileInput, LuCopy, LuCopyPlus } from 'react-icons/lu'
 import type { NodeKind } from '@/lib/types/workflowNodeDescriptor'
 import type React from 'react'
 
@@ -89,6 +89,35 @@ export const NODE_CATEGORIES: NodeCategory[] = [
         nodeType: 'renameFile',
         label: 'Rename File',
         icon: <LuFilePen size={14} />,
+      },
+    ],
+  },
+  {
+    name: 'Transfer',
+    nodes: [
+      {
+        kind: 'create',
+        nodeType: 'moveFolder',
+        label: 'Move Folder',
+        icon: <LuFolderInput size={14} />,
+      },
+      {
+        kind: 'create',
+        nodeType: 'moveFile',
+        label: 'Move File',
+        icon: <LuFileInput size={14} />,
+      },
+      {
+        kind: 'create',
+        nodeType: 'copyFolder',
+        label: 'Copy Folder',
+        icon: <LuCopy size={14} />,
+      },
+      {
+        kind: 'create',
+        nodeType: 'copyFile',
+        label: 'Copy File',
+        icon: <LuCopyPlus size={14} />,
       },
     ],
   },

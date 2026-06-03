@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { LuCircleCheck, LuCircleX, LuX } from 'react-icons/lu'
 import type { ExecutionResult } from '@/lib/types/workflow'
+import { ExecutionWarningsList } from './ExecutionWarningsList'
 
 interface ExecutionResultPopupProps {
   result: ExecutionResult
@@ -11,10 +12,14 @@ interface ExecutionResultPopupProps {
 }
 
 export function ExecutionResultPopup({ result, onClose }: ExecutionResultPopupProps) {
+  const hasWarnings = result.warnings.length > 0
+
   useEffect(() => {
+    // Keep the popup open when there are warnings to read; otherwise auto-dismiss as before.
+    if (hasWarnings) return
     const timer = setTimeout(onClose, 5000)
     return () => clearTimeout(timer)
-  }, [onClose])
+  }, [onClose, hasWarnings])
 
   return createPortal(
     <div
@@ -31,6 +36,7 @@ export function ExecutionResultPopup({ result, onClose }: ExecutionResultPopupPr
         {result.error && (
           <div className="mt-0.5 text-xs text-white/60 break-words">{result.error}</div>
         )}
+        <ExecutionWarningsList warnings={result.warnings} />
       </div>
       <button
         onClick={onClose}

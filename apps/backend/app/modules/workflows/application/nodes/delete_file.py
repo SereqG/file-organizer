@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Callable, Optional
 
 from app.modules.workflows.application.nodes.file_helpers import find_file_item_by_path
-from app.modules.workflows.domain.models import ExecutionContext, WorkflowItem, WorkflowNode
+from app.modules.workflows.domain.models import ExecutionContext, PlannedAction, WorkflowItem, WorkflowNode
 
 
 def _resolve_targets(node: WorkflowNode, context: ExecutionContext, scope: set[str]) -> tuple[Optional[str], list[str]]:
@@ -48,17 +48,19 @@ def execute_delete_file(node: WorkflowNode, context: ExecutionContext, scope: se
 
     for target in targets:
         removed = next((i for i in context.items if i.path == target), None)
-        staging_dir = tempfile.mkdtemp(prefix="workflow_delete_file_")
-        staged_path = Path(staging_dir) / Path(target).name
-        try:
-            shutil.move(target, str(staged_path))
-        except OSError:
-            shutil.rmtree(staging_dir, ignore_errors=True)
-            restore_all()
-            return f"Failed to delete file {target}.", None, None
+        if not context.dry_run:
+            staging_dir = tempfile.mkdtemp(prefix="workflow_delete_file_")
+            staged_path = Path(staging_dir) / Path(target).name
+            try:
+                shutil.move(target, str(staged_path))
+            except OSError:
+                shutil.rmtree(staging_dir, ignore_errors=True)
+                restore_all()
+                return f"Failed to delete file {target}.", None, None
+            staged.append((target, staged_path, staging_dir, removed))
         if removed is not None:
             context.items[:] = [i for i in context.items if i is not removed]
-        staged.append((target, staged_path, staging_dir, removed))
+        context.actions.append(PlannedAction(node.id, "delete", f"Delete file {target}", target_path=target))
 
     context.outputs[node.id] = {"deletedPaths": [target for target, _, _, _ in staged]}
 

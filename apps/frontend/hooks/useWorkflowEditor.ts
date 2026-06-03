@@ -4,10 +4,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNodesState, useEdgesState, addEdge } from '@xyflow/react'
 import type { Edge, Connection } from '@xyflow/react'
 import type { TriggerId } from '@/components/TriggerSelectModal'
-import type { CreateFolderNode as CreateFolderNodeType, DeleteFileNode as DeleteFileNodeType, DeleteFolderNode as DeleteFolderNodeType, ExecutionFailedNode, IfNode as IfNodeType, RenameFileNode as RenameFileNodeType, RenameFolderNode as RenameFolderNodeType, SwitchNode as SwitchNodeType } from '@/lib/types/workflow'
+import type { ConfigRemap, CopyFileNode as CopyNodeConfigType, CreateFolderNode as CreateFolderNodeType, DeleteFileNode as DeleteFileNodeType, DeleteFolderNode as DeleteFolderNodeType, ExecutionFailedNode, IfNode as IfNodeType, MoveFileNode as MoveNodeConfigType, RenameFileNode as RenameFileNodeType, RenameFolderNode as RenameFolderNodeType, SwitchNode as SwitchNodeType } from '@/lib/types/workflow'
 import { SWITCH_DEFAULT_HANDLE } from '@/lib/types/workflow'
 import { SWITCH_DEFAULT_COLOR, switchOutputColor } from '@/lib/workflow/utils/switchColors'
 import { useWorkflowDefinition } from '@/hooks/useWorkflowDefinition'
+import { remapNodeConfig } from '@/lib/workflow/utils/applyConfigRemap'
 import { TriggerNode } from '@/components/nodes/trigger_node/TriggerNode'
 import type { TriggerRFNode } from '@/components/nodes/trigger_node/TriggerNode'
 import { IfNode } from '@/components/nodes/if_node/IfNode'
@@ -24,10 +25,14 @@ import { DeleteFileNode } from '@/components/nodes/delete_file_node/DeleteFileNo
 import type { DeleteFileRFNode } from '@/components/nodes/delete_file_node/DeleteFileNode'
 import { RenameFileNode } from '@/components/nodes/rename_file_node/RenameFileNode'
 import type { RenameFileRFNode } from '@/components/nodes/rename_file_node/RenameFileNode'
+import { MoveNode } from '@/components/nodes/move_node/MoveNode'
+import type { MoveRFNode } from '@/components/nodes/move_node/MoveNode'
+import { CopyNode } from '@/components/nodes/copy_node/CopyNode'
+import type { CopyRFNode } from '@/components/nodes/copy_node/CopyNode'
 
-export type AppNode = TriggerRFNode | IfRFNode | SwitchRFNode | CreateFolderRFNode | DeleteFolderRFNode | RenameFolderRFNode | DeleteFileRFNode | RenameFileRFNode
+export type AppNode = TriggerRFNode | IfRFNode | SwitchRFNode | CreateFolderRFNode | DeleteFolderRFNode | RenameFolderRFNode | DeleteFileRFNode | RenameFileRFNode | MoveRFNode | CopyRFNode
 
-const NODE_TYPES = { trigger: TriggerNode, if: IfNode, switch: SwitchNode, createFolder: CreateFolderNode, deleteFolder: DeleteFolderNode, renameFolder: RenameFolderNode, deleteFile: DeleteFileNode, renameFile: RenameFileNode }
+const NODE_TYPES = { trigger: TriggerNode, if: IfNode, switch: SwitchNode, createFolder: CreateFolderNode, deleteFolder: DeleteFolderNode, renameFolder: RenameFolderNode, deleteFile: DeleteFileNode, renameFile: RenameFileNode, moveFile: MoveNode, moveFolder: MoveNode, copyFile: CopyNode, copyFolder: CopyNode }
 
 // Color the edge leaving a switch output so the trace matches its handle. Returns undefined for
 // non-switch sources (default React Flow styling).
@@ -54,6 +59,8 @@ export function useWorkflowEditor() {
   const [editingRenameFolderNodeId, setEditingRenameFolderNodeId] = useState<string | null>(null)
   const [editingDeleteFileNodeId, setEditingDeleteFileNodeId] = useState<string | null>(null)
   const [editingRenameFileNodeId, setEditingRenameFileNodeId] = useState<string | null>(null)
+  const [editingMoveNodeId, setEditingMoveNodeId] = useState<string | null>(null)
+  const [editingCopyNodeId, setEditingCopyNodeId] = useState<string | null>(null)
 
   const {
     definition,
@@ -68,6 +75,9 @@ export function useWorkflowEditor() {
     updateRenameFolderNodeConfig,
     updateDeleteFileNodeConfig,
     updateRenameFileNodeConfig,
+    updateMoveNodeConfig,
+    updateCopyNodeConfig,
+    applyConfigRemap,
     addWorkflowEdge,
     removeWorkflowEdge,
   } = useWorkflowDefinition()
@@ -111,6 +121,8 @@ export function useWorkflowEditor() {
     openRenameFolderNodeConfig: (id: string) => setEditingRenameFolderNodeId(id),
     openDeleteFileNodeConfig: (id: string) => setEditingDeleteFileNodeId(id),
     openRenameFileNodeConfig: (id: string) => setEditingRenameFileNodeId(id),
+    openMoveNodeConfig: (id: string) => setEditingMoveNodeId(id),
+    openCopyNodeConfig: (id: string) => setEditingCopyNodeId(id),
   }), [])
 
   const handleIfConfigSave = useCallback((config: IfNodeType['config']) => {
@@ -184,6 +196,33 @@ export function useWorkflowEditor() {
     updateRenameFileNodeConfig(editingRenameFileNodeId, config)
   }, [editingRenameFileNodeId, setNodes, updateRenameFileNodeConfig])
 
+  const handleMoveConfigSave = useCallback((config: MoveNodeConfigType['config']) => {
+    if (!editingMoveNodeId) return
+    setNodes((prev) => prev.map((n) =>
+      n.id === editingMoveNodeId ? { ...n, data: { ...n.data, config } } as AppNode : n
+    ))
+    updateMoveNodeConfig(editingMoveNodeId, config)
+  }, [editingMoveNodeId, setNodes, updateMoveNodeConfig])
+
+  const handleCopyConfigSave = useCallback((config: CopyNodeConfigType['config']) => {
+    if (!editingCopyNodeId) return
+    setNodes((prev) => prev.map((n) =>
+      n.id === editingCopyNodeId ? { ...n, data: { ...n.data, config } } as AppNode : n
+    ))
+    updateCopyNodeConfig(editingCopyNodeId, config)
+  }, [editingCopyNodeId, setNodes, updateCopyNodeConfig])
+
+  // After a run, apply the backend's path remaps to both the canvas nodes and the definition.
+  const applyConfigRemapToCanvas = useCallback((remaps: ConfigRemap[]) => {
+    if (remaps.length === 0) return
+    setNodes((prev) => prev.map((n) => {
+      const config = (n.data as { config?: Record<string, unknown> }).config
+      if (!config || !n.type) return n
+      return { ...n, data: { ...n.data, config: remapNodeConfig({ type: n.type, config }, remaps) } } as AppNode
+    }))
+    applyConfigRemap(remaps)
+  }, [setNodes, applyConfigRemap])
+
   const clearNodeErrors = useCallback(() => {
     setNodes((prev) => prev.map((n) =>
       n.data.executionError ? { ...n, data: { ...n.data, executionError: undefined } } as AppNode : n
@@ -216,6 +255,8 @@ export function useWorkflowEditor() {
     editingRenameFolderNodeId,
     editingDeleteFileNodeId,
     editingRenameFileNodeId,
+    editingMoveNodeId,
+    editingCopyNodeId,
     nodeConfigValue,
     onNodesChange,
     onEdgesChange,
@@ -231,6 +272,9 @@ export function useWorkflowEditor() {
     handleRenameFolderConfigSave,
     handleDeleteFileConfigSave,
     handleRenameFileConfigSave,
+    handleMoveConfigSave,
+    handleCopyConfigSave,
+    applyConfigRemapToCanvas,
     clearNodeErrors,
     markFailedNodes,
     closeIfConfig: () => setEditingIfNodeId(null),
@@ -240,5 +284,7 @@ export function useWorkflowEditor() {
     closeRenameFolderConfig: () => setEditingRenameFolderNodeId(null),
     closeDeleteFileConfig: () => setEditingDeleteFileNodeId(null),
     closeRenameFileConfig: () => setEditingRenameFileNodeId(null),
+    closeMoveConfig: () => setEditingMoveNodeId(null),
+    closeCopyConfig: () => setEditingCopyNodeId(null),
   }
 }

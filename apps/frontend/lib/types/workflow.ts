@@ -20,6 +20,10 @@ export type WorkflowNodeType =
   | 'renameFolder'
   | 'deleteFile'
   | 'renameFile'
+  | 'moveFile'
+  | 'moveFolder'
+  | 'copyFile'
+  | 'copyFolder'
   | 'loop'
   | 'transform';
 
@@ -180,7 +184,44 @@ export interface RenameFileNode extends BaseGeneralNode {
   };
 }
 
-export type WorkflowNode = IfNode | SwitchNode | CreateFolderNode | DeleteFolderNode | RenameFolderNode | DeleteFileNode | RenameFileNode;
+// Collision strategy for the transfer (Move/Copy) nodes. `skip` is unique to transfers.
+export type TransferIfExists = 'fail' | 'rename_incrementally' | 'overwrite' | 'skip';
+
+export interface MoveFileNode extends BaseGeneralNode {
+  type: 'moveFile';
+  config: {
+    targetPath: string;
+    ifExists: TransferIfExists;
+  };
+}
+
+export interface MoveFolderNode extends BaseGeneralNode {
+  type: 'moveFolder';
+  config: {
+    targetPath: string;
+    ifExists: TransferIfExists;
+  };
+}
+
+export interface CopyFileNode extends BaseGeneralNode {
+  type: 'copyFile';
+  config: {
+    targetPaths: string[];
+    keepOriginal: boolean;
+    ifExists: TransferIfExists;
+  };
+}
+
+export interface CopyFolderNode extends BaseGeneralNode {
+  type: 'copyFolder';
+  config: {
+    targetPaths: string[];
+    keepOriginal: boolean;
+    ifExists: TransferIfExists;
+  };
+}
+
+export type WorkflowNode = IfNode | SwitchNode | CreateFolderNode | DeleteFolderNode | RenameFolderNode | DeleteFileNode | RenameFileNode | MoveFileNode | MoveFolderNode | CopyFileNode | CopyFolderNode;
 
 export interface WorkflowItemStat {
   size: number;
@@ -245,8 +286,56 @@ export interface ExecutionFailedNode {
   error: string;
 }
 
+// Non-fatal notice raised by a node (e.g. Move/Copy auto-skipped an item). `code` is a stable
+// machine code from the backend warning catalogue; the popup groups warnings by it.
+export interface ExecutionWarning {
+  nodeId: string;
+  code: string;
+  message: string;
+  itemPath?: string | null;
+  targetPath?: string | null;
+}
+
+// A path relocation a Move performed; the editor applies these to node configs so the canvas updates.
+export interface ConfigRemap {
+  oldPath: string;
+  newPath: string;
+}
+
 export interface ExecutionResult {
   success: boolean;
   error?: string;
   failedNodes: ExecutionFailedNode[];
+  warnings: ExecutionWarning[];
+  configRemap: ConfigRemap[];
+}
+
+// One filesystem operation a dry-run predicts. `kind` is create | delete | rename | reuse | move | copy | skip.
+export interface PlannedAction {
+  nodeId: string;
+  kind: string;
+  description: string;
+  itemPath?: string | null;
+  targetPath?: string | null;
+}
+
+// Result of a dry-run: what a real run would do, surfaced in the preview gate before any disk writes.
+export interface WorkflowPreview {
+  ok: boolean;
+  error?: string | null;
+  actions: PlannedAction[];
+  warnings: ExecutionWarning[];
+  failedNodes: ExecutionFailedNode[];
+}
+
+// A mid-run choice the engine is blocked on (e.g. a Move/Copy destination-name collision). The user
+// picks one of `options`; the choice is posted back to resume the suspended run.
+export interface PendingDecision {
+  nodeId: string;
+  code?: string;
+  message?: string;
+  itemPath?: string | null;
+  targetPath?: string | null;
+  options?: string[];
+  default?: string;
 }

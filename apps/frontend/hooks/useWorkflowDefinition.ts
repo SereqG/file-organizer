@@ -2,8 +2,9 @@
 
 import { useState, useCallback } from 'react'
 import type { Connection } from '@xyflow/react'
-import type { CreateFolderNode, DeleteFileNode, DeleteFolderNode, IfNode, RenameFileNode, RenameFolderNode, SwitchCase, SwitchNode, WorkflowDefinition, WorkflowEdge, WorkflowTriggerNode } from '@/lib/types/workflow'
+import type { ConfigRemap, CopyFileNode, CopyFolderNode, CreateFolderNode, DeleteFileNode, DeleteFolderNode, IfNode, MoveFileNode, MoveFolderNode, RenameFileNode, RenameFolderNode, SwitchCase, SwitchNode, WorkflowDefinition, WorkflowEdge, WorkflowTriggerNode } from '@/lib/types/workflow'
 import type { TriggerId } from '@/components/TriggerSelectModal'
+import { remapNodeConfig } from '@/lib/workflow/utils/applyConfigRemap'
 
 const WORKFLOW_VERSION = '1.0'
 
@@ -139,6 +140,50 @@ function buildRenameFileNode(id: string, label: string): RenameFileNode {
   }
 }
 
+function buildMoveFileNode(id: string, label: string): MoveFileNode {
+  return {
+    id,
+    type: 'moveFile',
+    category: 'general',
+    name: label,
+    version: 1,
+    config: { targetPath: '', ifExists: 'fail' },
+  }
+}
+
+function buildMoveFolderNode(id: string, label: string): MoveFolderNode {
+  return {
+    id,
+    type: 'moveFolder',
+    category: 'general',
+    name: label,
+    version: 1,
+    config: { targetPath: '', ifExists: 'fail' },
+  }
+}
+
+function buildCopyFileNode(id: string, label: string): CopyFileNode {
+  return {
+    id,
+    type: 'copyFile',
+    category: 'general',
+    name: label,
+    version: 1,
+    config: { targetPaths: [], keepOriginal: true, ifExists: 'fail' },
+  }
+}
+
+function buildCopyFolderNode(id: string, label: string): CopyFolderNode {
+  return {
+    id,
+    type: 'copyFolder',
+    category: 'general',
+    name: label,
+    version: 1,
+    config: { targetPaths: [], keepOriginal: true, ifExists: 'fail' },
+  }
+}
+
 export function useWorkflowDefinition() {
   const [definition, setDefinition] = useState<WorkflowDefinition | null>(null)
 
@@ -161,6 +206,10 @@ export function useWorkflowDefinition() {
       if (nodeType === 'renameFolder') return { ...prev, nodes: [...prev.nodes, buildRenameFolderNode(id, label)] }
       if (nodeType === 'deleteFile') return { ...prev, nodes: [...prev.nodes, buildDeleteFileNode(id, label)] }
       if (nodeType === 'renameFile') return { ...prev, nodes: [...prev.nodes, buildRenameFileNode(id, label)] }
+      if (nodeType === 'moveFile') return { ...prev, nodes: [...prev.nodes, buildMoveFileNode(id, label)] }
+      if (nodeType === 'moveFolder') return { ...prev, nodes: [...prev.nodes, buildMoveFolderNode(id, label)] }
+      if (nodeType === 'copyFile') return { ...prev, nodes: [...prev.nodes, buildCopyFileNode(id, label)] }
+      if (nodeType === 'copyFolder') return { ...prev, nodes: [...prev.nodes, buildCopyFolderNode(id, label)] }
       return prev
     })
   }, [])
@@ -242,6 +291,40 @@ export function useWorkflowDefinition() {
     })
   }, [])
 
+  // moveFile and moveFolder share a config shape, so one updater handles both.
+  const updateMoveNodeConfig = useCallback((id: string, config: MoveFileNode['config']) => {
+    setDefinition((prev) => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        nodes: prev.nodes.map((n) => (n.id === id && (n.type === 'moveFile' || n.type === 'moveFolder') ? { ...n, config } : n)),
+      }
+    })
+  }, [])
+
+  // copyFile and copyFolder share a config shape, so one updater handles both.
+  const updateCopyNodeConfig = useCallback((id: string, config: CopyFileNode['config']) => {
+    setDefinition((prev) => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        nodes: prev.nodes.map((n) => (n.id === id && (n.type === 'copyFile' || n.type === 'copyFolder') ? { ...n, config } : n)),
+      }
+    })
+  }, [])
+
+  // Apply a Move's returned path remaps to every node's config so the canvas reflects relocations.
+  const applyConfigRemap = useCallback((remaps: ConfigRemap[]) => {
+    if (remaps.length === 0) return
+    setDefinition((prev) => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        nodes: prev.nodes.map((n) => ({ ...n, config: remapNodeConfig({ type: n.type, config: n.config }, remaps) }) as typeof n),
+      }
+    })
+  }, [])
+
   const addWorkflowEdge = useCallback((connection: Connection) => {
     setDefinition((prev) => {
       if (!prev) return prev
@@ -276,6 +359,9 @@ export function useWorkflowDefinition() {
     updateRenameFolderNodeConfig,
     updateDeleteFileNodeConfig,
     updateRenameFileNodeConfig,
+    updateMoveNodeConfig,
+    updateCopyNodeConfig,
+    applyConfigRemap,
     addWorkflowEdge,
     removeWorkflowEdge,
   }

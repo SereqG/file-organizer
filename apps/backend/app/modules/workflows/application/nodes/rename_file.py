@@ -5,7 +5,7 @@ from app.modules.workflows.application.nodes.file_helpers import (
     find_file_item_by_path,
     resolve_incremental_file_name,
 )
-from app.modules.workflows.domain.models import ExecutionContext, WorkflowNode
+from app.modules.workflows.domain.models import ExecutionContext, PlannedAction, WorkflowNode
 
 
 def execute_rename_file(node: WorkflowNode, context: ExecutionContext, scope: set[str]) -> tuple[Optional[str], Optional[Callable], Optional[Callable]]:
@@ -29,16 +29,20 @@ def execute_rename_file(node: WorkflowNode, context: ExecutionContext, scope: se
         else:
             return f"A file named {target.name} already exists.", None, None
 
-    try:
-        source.rename(target)
-    except OSError:
-        return f"Failed to rename file {file_path}.", None, None
+    if not context.dry_run:
+        try:
+            source.rename(target)
+        except OSError:
+            return f"Failed to rename file {file_path}.", None, None
 
     old_path = str(source)
     new_path = str(target)
     item.path = new_path
     item.name = target.name
     context.outputs[node.id] = item
+    context.actions.append(
+        PlannedAction(node.id, "rename", f"Rename file {old_path} to {target.name}", item_path=old_path, target_path=new_path)
+    )
 
     def undo() -> None:
         target.rename(source)
