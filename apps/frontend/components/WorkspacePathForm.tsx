@@ -11,7 +11,7 @@ import type { FileTreeNode } from '@/lib/types/explore'
 const initialState: WorkspacePathState = {}
 
 interface WorkspacePathFormProps {
-  onNextStep: (path: string, tree: FileTreeNode) => void
+  onNextStep: (path: string, tree: FileTreeNode, sessionId: string) => void
 }
 
 export function WorkspacePathForm({ onNextStep }: WorkspacePathFormProps) {

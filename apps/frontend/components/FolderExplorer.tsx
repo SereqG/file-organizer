@@ -10,7 +10,7 @@ const SLOW_SCAN_THRESHOLD_S = 8
 
 interface Props {
   sessionId: string
-  onNextStep: (path: string, tree: FileTreeNode) => void
+  onNextStep: (path: string, tree: FileTreeNode, sessionId: string) => void
 }
 
 export function FolderExplorer({ sessionId, onNextStep }: Props) {
@@ -67,7 +67,7 @@ export function FolderExplorer({ sessionId, onNextStep }: Props) {
       <p className="mb-3 text-xs text-white/30 font-mono">{state.tree.path}</p>
       <FileTree root={state.tree} />
       <button
-        onClick={() => onNextStep(state.tree.path, state.tree)}
+        onClick={() => onNextStep(state.tree.path, state.tree, sessionId)}
         className="
           mt-5 w-full rounded-xl px-5 py-3.5 text-sm font-medium
           bg-orange-500/10 border border-orange-500/20 text-orange-400
