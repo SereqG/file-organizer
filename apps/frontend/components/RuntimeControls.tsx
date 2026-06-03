@@ -16,6 +16,7 @@ interface RuntimeControlsProps {
   onRunStart: () => void
   onRunComplete: (failedNodes: ExecutionFailedNode[]) => void
   onConfigRemap: (remaps: ConfigRemap[]) => void
+  isExploring: boolean
 }
 
 async function previewWorkflow(definition: WorkflowDefinition, rootPath: string): Promise<WorkflowPreview> {
@@ -42,7 +43,7 @@ async function previewWorkflow(definition: WorkflowDefinition, rootPath: string)
   }
 }
 
-export function RuntimeControls({ definition, rootPath, onRunStart, onRunComplete, onConfigRemap }: RuntimeControlsProps) {
+export function RuntimeControls({ definition, rootPath, onRunStart, onRunComplete, onConfigRemap, isExploring }: RuntimeControlsProps) {
   const notReadyReason = useWorkflowReadiness(definition)
   const [isPreviewing, setIsPreviewing] = useState(false)
   const [preview, setPreview] = useState<WorkflowPreview | null>(null)
@@ -73,7 +74,7 @@ export function RuntimeControls({ definition, rootPath, onRunStart, onRunComplet
     void execution.start(definition, rootPath)
   }
 
-  const isBusy = isPreviewing || execution.isRunning
+  const isBusy = isPreviewing || execution.isRunning || isExploring
 
   return (
     <>
@@ -82,7 +83,7 @@ export function RuntimeControls({ definition, rootPath, onRunStart, onRunComplet
           label="Run workflow"
           onClick={handleRun}
           disabled={notReadyReason !== null || isBusy}
-          disabledReason={notReadyReason ?? undefined}
+          disabledReason={notReadyReason ?? (isExploring ? 'File system exploration in progress' : undefined)}
         >
           {isBusy
             ? <LuLoaderCircle size={14} className="animate-spin" />

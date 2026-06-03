@@ -1,12 +1,16 @@
 'use client'
 
+import { useCallback, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { ReactFlow, Background, BackgroundVariant } from '@xyflow/react'
 import type { FileTreeNode } from '@/lib/types/explore'
+import type { ExecutionFailedNode } from '@/lib/types/workflow'
 import { useWorkflowEditor } from '@/hooks/useWorkflowEditor'
+import { useExploreJob } from '@/hooks/useExploreJob'
 import { NodeConfigContext } from '@/lib/contexts/NodeConfigContext'
 import { WorkspaceIndicator } from './WorkspaceIndicator'
 import { BottomControls } from './BottomControls'
+import { DepthConfirmModal } from './DepthConfirmModal'
 import { IfConfigModal } from './nodes/if_node/IfConfigModal'
 import { SwitchConfigModal } from './nodes/switch_node/SwitchConfigModal'
 import { CreateFolderConfigModal } from './nodes/create_folder_node/CreateFolderConfigModal'
@@ -21,9 +25,20 @@ import { WorkflowControls } from './WorkflowControls'
 interface WorkflowEditorProps {
   workspacePath: string
   workspaceTree: FileTreeNode
+  sessionId: string
+  onTreeRefresh: (tree: FileTreeNode) => void
 }
 
-export function WorkflowEditor({ workspacePath, workspaceTree }: WorkflowEditorProps) {
+export function WorkflowEditor({ workspacePath, workspaceTree, sessionId, onTreeRefresh }: WorkflowEditorProps) {
+  const { state: exploreState, startExplore, acceptPartialTree } = useExploreJob(sessionId, { autoStart: false })
+
+  const isExploring = exploreState.phase === 'loading' || exploreState.phase === 'awaiting_confirmation'
+
+  useEffect(() => {
+    if (exploreState.phase !== 'complete') return
+    onTreeRefresh(exploreState.tree)
+  }, [exploreState, onTreeRefresh])
+
   const {
     mounted,
     definition,
@@ -72,6 +87,11 @@ export function WorkflowEditor({ workspacePath, workspaceTree }: WorkflowEditorP
     closeCopyConfig,
   } = useWorkflowEditor()
 
+  const handleRunComplete = useCallback((failedNodes: ExecutionFailedNode[]) => {
+    markFailedNodes(failedNodes)
+    startExplore(false)
+  }, [markFailedNodes, startExplore])
+
   if (!mounted) return null
 
   console.log('Rendering WorkflowEditor with nodes:', nodes, 'and edges:', edges)
@@ -110,8 +130,10 @@ export function WorkflowEditor({ workspacePath, workspaceTree }: WorkflowEditorP
             definition={definition}
             rootPath={workspacePath}
             onRunStart={clearNodeErrors}
-            onRunComplete={markFailedNodes}
+            onRunComplete={handleRunComplete}
             onConfigRemap={applyConfigRemapToCanvas}
+            onReexplore={() => startExplore(false)}
+            isExploring={isExploring}
           />
           <WorkflowControls
             hasTrigger={hasTrigger}
@@ -203,6 +225,24 @@ export function WorkflowEditor({ workspacePath, workspaceTree }: WorkflowEditorP
             ].join(', '),
           }}
         />
+
+        {exploreState.phase === 'loading' && (
+          <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/80 px-6 py-4">
+              <span className="size-4 rounded-full border-2 border-white/10 border-t-orange-400/60 animate-spin" />
+              <span className="text-sm text-white/70">File system exploration, please wait...</span>
+            </div>
+          </div>
+        )}
+
+        {exploreState.phase === 'awaiting_confirmation' && (
+          <DepthConfirmModal
+            detectedDepth={exploreState.detectedDepth}
+            directoryName={exploreState.directoryName}
+            onConfirm={() => startExplore(true)}
+            onCancel={() => acceptPartialTree(exploreState.partialTree)}
+          />
+        )}
       </div>
     </NodeConfigContext.Provider>,
     document.body

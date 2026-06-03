@@ -16,7 +16,7 @@ export type ExploreState =
   | { phase: 'complete'; tree: FileTreeNode }
   | { phase: 'error'; message: string }
 
-export function useExploreJob(sessionId: string) {
+export function useExploreJob(sessionId: string, { autoStart = true }: { autoStart?: boolean } = {}) {
   const [state, setState] = useState<ExploreState>({ phase: 'idle' })
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
 
@@ -130,9 +130,10 @@ export function useExploreJob(sessionId: string) {
   }, [cancelPoll])
 
   useEffect(() => {
+    if (!autoStart) return
     startExplore(false)
     return cancelPoll
-  }, [startExplore, cancelPoll])
+  }, [autoStart, startExplore, cancelPoll])
 
   return { state, elapsedSeconds, startExplore, acceptPartialTree, cancelScan: cancelPoll }
 }
