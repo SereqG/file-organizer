@@ -33,6 +33,14 @@ function buildGeneralNode(id: string, entry: NodeDescriptor, position: { x: numb
       return { id, type: 'deleteFile', position, data: { label: entry.label } }
     case 'renameFile':
       return { id, type: 'renameFile', position, data: { label: entry.label } }
+    case 'moveFile':
+      return { id, type: 'moveFile', position, data: { label: entry.label } }
+    case 'moveFolder':
+      return { id, type: 'moveFolder', position, data: { label: entry.label } }
+    case 'copyFile':
+      return { id, type: 'copyFile', position, data: { label: entry.label } }
+    case 'copyFolder':
+      return { id, type: 'copyFolder', position, data: { label: entry.label } }
     default:
       return null
   }

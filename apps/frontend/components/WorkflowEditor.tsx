@@ -74,6 +74,8 @@ export function WorkflowEditor({ workspacePath, workspaceTree }: WorkflowEditorP
 
   if (!mounted) return null
 
+  console.log('Rendering WorkflowEditor with nodes:', nodes, 'and edges:', edges)
+
   return createPortal(
     <NodeConfigContext.Provider value={nodeConfigValue}>
       <div className="fixed inset-0">
