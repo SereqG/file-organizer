@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
 import type { Category, MinConfidence, ItemType } from '@/lib/types/category'
 import { RESERVED_CATEGORY_NAME } from '@/lib/types/category'
 
@@ -99,7 +99,28 @@ function saveCustomCategories(categories: Category[]): void {
   }
 }
 
-export function useCategoryLibrary() {
+export interface CategoryLibraryContextValue {
+  allCategories: Category[]
+  predefinedCategories: Category[]
+  customCategories: Category[]
+  loaded: boolean
+  getCategoryById: (id: string) => Category | undefined
+  isNameTaken: (name: string, excludeId?: string) => boolean
+  createCategory: (input: {
+    name: string
+    description: string
+    itemType: ItemType
+    extensions: string[]
+    minConfidence: MinConfidence
+  }) => string | null
+  updateCategory: (id: string, input: Partial<Omit<Category, 'id' | 'isPredefined'>>) => string | null
+  deleteCategory: (id: string) => void
+  copyPredefined: (id: string) => string | null
+}
+
+const CategoryLibraryContext = createContext<CategoryLibraryContextValue | null>(null)
+
+export function CategoryLibraryProvider({ children }: { children: ReactNode }) {
   const [customCategories, setCustomCategories] = useState<Category[]>([])
   const [loaded, setLoaded] = useState(false)
 
@@ -200,7 +221,7 @@ export function useCategoryLibrary() {
     [isNameTaken, createCategory],
   )
 
-  return {
+  const value: CategoryLibraryContextValue = {
     allCategories,
     predefinedCategories: PREDEFINED_CATEGORIES,
     customCategories,
@@ -212,4 +233,12 @@ export function useCategoryLibrary() {
     deleteCategory,
     copyPredefined,
   }
+
+  return <CategoryLibraryContext.Provider value={value}>{children}</CategoryLibraryContext.Provider>
+}
+
+export function useCategoryLibrary(): CategoryLibraryContextValue {
+  const ctx = useContext(CategoryLibraryContext)
+  if (!ctx) throw new Error('useCategoryLibrary must be used within a CategoryLibraryProvider')
+  return ctx
 }

@@ -8,6 +8,7 @@ import type { ExecutionFailedNode } from '@/lib/types/workflow'
 import { useWorkflowEditor } from '@/hooks/useWorkflowEditor'
 import { useExploreJob } from '@/hooks/useExploreJob'
 import { NodeConfigContext } from '@/lib/contexts/NodeConfigContext'
+import { CategoryLibraryProvider } from '@/lib/workflow/stores/categoryLibrary'
 import { WorkspaceIndicator } from './WorkspaceIndicator'
 import { BottomControls } from './BottomControls'
 import { DepthConfirmModal } from './DepthConfirmModal'
@@ -99,6 +100,7 @@ export function WorkflowEditor({ workspacePath, workspaceTree, sessionId, onTree
   if (!mounted) return null
 
   return createPortal(
+    <CategoryLibraryProvider>
     <NodeConfigContext.Provider value={nodeConfigValue}>
       <div className="fixed inset-0">
           <WorkspaceIndicator path={workspacePath} tree={workspaceTree} />
@@ -253,7 +255,8 @@ export function WorkflowEditor({ workspacePath, workspaceTree, sessionId, onTree
             />
           )}
         </div>
-    </NodeConfigContext.Provider>,
+    </NodeConfigContext.Provider>
+    </CategoryLibraryProvider>,
     document.body
   )
 }

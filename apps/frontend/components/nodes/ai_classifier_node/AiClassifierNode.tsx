@@ -133,7 +133,7 @@ export function AiClassifierNode({ id, data }: NodeProps<AiClassifierRFNode>) {
         <Handle
           type="target"
           position={Position.Left}
-          className="!border-purple-500/40 !bg-[#111]"
+          className="!border-white/50 !bg-white/30"
         />
 
         {outputs.map((output, index) => {
@@ -144,8 +144,7 @@ export function AiClassifierNode({ id, data }: NodeProps<AiClassifierRFNode>) {
                 type="source"
                 id={output.id}
                 position={Position.Right}
-                style={{ top, borderColor: output.color }}
-                className="!bg-[#111]"
+                style={{ top, borderColor: output.color, backgroundColor: output.color }}
               />
               <span
                 className="pointer-events-none absolute right-2 text-[9px] font-medium tracking-wide truncate max-w-[80px]"
