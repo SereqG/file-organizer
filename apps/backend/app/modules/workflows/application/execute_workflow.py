@@ -24,6 +24,7 @@ from app.modules.workflows.domain.models import (
 
 IF_NODE_TYPE = "if"
 SWITCH_NODE_TYPE = "switch"
+AI_CLASSIFIER_NODE_TYPE = "ai_classifier"
 TRIGGER_PREFIX = "trigger-"
 
 # Sentinel error returned when a paused run is cancelled, so the runner can map it to a distinct
@@ -154,10 +155,12 @@ def execute_workflow(workflow: Workflow, context: ExecutionContext) -> WorkflowE
             error = _route_partitioned(node, scope, item_by_id, out_edges, incoming, partition_if, "If")
         elif node.type == SWITCH_NODE_TYPE:
             error = _route_partitioned(node, scope, item_by_id, out_edges, incoming, partition_switch, "Switch")
+        elif node.type == AI_CLASSIFIER_NODE_TYPE:
+            error = _route_ai_classifier(node, scope, item_by_id, out_edges, incoming)
         else:
             error = None
 
-        if node.type in (IF_NODE_TYPE, SWITCH_NODE_TYPE):
+        if node.type in (IF_NODE_TYPE, SWITCH_NODE_TYPE, AI_CLASSIFIER_NODE_TYPE):
             if error:
                 if not context.dry_run:
                     unwind()
@@ -226,7 +229,10 @@ def execute_workflow(workflow: Workflow, context: ExecutionContext) -> WorkflowE
         for commit in commit_stack:
             commit()
 
-    return WorkflowExecutionResult(executed_node_ids=executed, warnings=list(context.warnings))
+    return WorkflowExecutionResult(
+        executed_node_ids=executed,
+        warnings=list(context.warnings),
+    )
 
 
 def _validate_edges(workflow: Workflow) -> Optional[str]:
@@ -313,6 +319,54 @@ def _route_partitioned(
 
     for target, handle in out_edges.get(node.id, []):
         branch_ids = branches.get(handle)
+        if branch_ids:
+            incoming[target] |= set(branch_ids)
+    return None
+
+
+def _route_ai_classifier(
+    node: WorkflowNode,
+    scope: set[str],
+    item_by_id: dict,
+    out_edges: dict[str, list[tuple[str, Optional[str]]]],
+    incoming: dict[str, set[str]],
+) -> Optional[str]:
+    """Classify scoped items via AI and route each item id to its category handle.
+    Returns an error string on failure, None on success."""
+    from app.modules.ai.application.classifier import classify_items
+    from app.modules.ai.domain.models import Category
+
+    config = node.config
+    raw_categories: list[dict] = config.get("categories", [])
+    allow_duplicate: bool = config.get("allowDuplicate", False)
+
+    if not raw_categories:
+        return "AI Classifier: no categories configured."
+
+    categories: list[Category] = []
+    for c in raw_categories:
+        try:
+            categories.append(Category(
+                id=c["id"],
+                name=c["name"],
+                description=c["description"],
+                item_type=c.get("itemType", "both"),
+                extensions=c.get("extensions", []),
+                min_confidence=c.get("minConfidence", "medium"),
+            ))
+        except (KeyError, TypeError):
+            return "AI Classifier: one or more categories is missing required fields."
+
+    scoped_items = [item_by_id[item_id] for item_id in scope if item_id in item_by_id]
+    error, buckets = classify_items(scoped_items, categories, allow_duplicate)
+
+    if error:
+        return error
+
+    for target, handle in out_edges.get(node.id, []):
+        if handle is None:
+            continue
+        branch_ids = (buckets or {}).get(handle, [])
         if branch_ids:
             incoming[target] |= set(branch_ids)
     return None

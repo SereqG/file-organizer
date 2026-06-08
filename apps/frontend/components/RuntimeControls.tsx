@@ -6,9 +6,11 @@ import { ControlButton } from './ControlButton'
 import { ExecutionResultPopup } from './ExecutionResultPopup'
 import { WorkflowPreviewModal } from './WorkflowPreviewModal'
 import { DecisionModal } from './DecisionModal'
-import type { ConfigRemap, ExecutionFailedNode, WorkflowDefinition, WorkflowPreview } from '@/lib/types/workflow'
+import type { ConfigRemap, ExecutionFailedNode, WorkflowDefinition, WorkflowNode } from '@/lib/types/workflow'
 import { useWorkflowReadiness } from '@/hooks/useWorkflowReadiness'
 import { useWorkflowExecution } from '@/hooks/useWorkflowExecution'
+import type { WorkflowPreview } from '@/lib/types/workflow'
+import { PREDEFINED_CATEGORIES, loadCustomCategories } from '@/lib/workflow/stores/categoryLibrary'
 
 interface RuntimeControlsProps {
   definition: WorkflowDefinition | null
@@ -19,12 +21,35 @@ interface RuntimeControlsProps {
   isExploring: boolean
 }
 
-async function previewWorkflow(definition: WorkflowDefinition, rootPath: string): Promise<WorkflowPreview> {
+function resolveAiClassifierCategories(
+  nodes: WorkflowNode[],
+  getCategoryById: (id: string) => { id: string; name: string; description: string; itemType: string; extensions: string[]; minConfidence: string } | undefined,
+): WorkflowNode[] {
+  return nodes.map((node) => {
+    if (node.type !== 'ai_classifier') return node
+    const resolvedCategories = node.config.categoryIds
+      .map((id) => getCategoryById(id))
+      .filter(Boolean)
+    return {
+      ...node,
+      config: {
+        categories: resolvedCategories,
+        allowDuplicate: node.config.allowDuplicate,
+      },
+    } as unknown as WorkflowNode
+  })
+}
+
+async function previewWorkflow(
+  definition: WorkflowDefinition,
+  rootPath: string,
+  resolvedNodes: WorkflowNode[],
+): Promise<WorkflowPreview> {
   const res = await fetch('/api/workflows/execute', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      workflow: { nodes: definition.nodes, edges: definition.edges, trigger: definition.trigger },
+      workflow: { nodes: resolvedNodes, edges: definition.edges, trigger: definition.trigger },
       rootPath,
       mode: 'dryRun',
     }),
@@ -47,9 +72,14 @@ export function RuntimeControls({ definition, rootPath, onRunStart, onRunComplet
   const notReadyReason = useWorkflowReadiness(definition)
   const [isPreviewing, setIsPreviewing] = useState(false)
   const [preview, setPreview] = useState<WorkflowPreview | null>(null)
+  const [pendingResolvedNodes, setPendingResolvedNodes] = useState<WorkflowNode[] | null>(null)
   const execution = useWorkflowExecution()
 
-  // A finished run reports its failed nodes (for canvas marking) and any path remaps it produced.
+  function getCategoryByIdFresh(id: string) {
+    const all = [...PREDEFINED_CATEGORIES, ...loadCustomCategories()]
+    return all.find((c) => c.id === id)
+  }
+
   useEffect(() => {
     if (!execution.result) return
     onRunComplete(execution.result.failedNodes)
@@ -58,20 +88,50 @@ export function RuntimeControls({ definition, rootPath, onRunStart, onRunComplet
 
   async function handleRun() {
     if (!definition) return
+
+    const resolvedNodes = resolveAiClassifierCategories(definition.nodes, getCategoryByIdFresh)
+    const resolvedById = new Map(resolvedNodes.map((r) => [r.id, r.config as Record<string, unknown>]))
+    const orphanedNode = definition.nodes.find(
+      (n) =>
+        n.type === 'ai_classifier' &&
+        n.config.categoryIds.length > 0 &&
+        (resolvedById.get(n.id)?.categories as unknown[])?.length === 0,
+    )
+    if (orphanedNode) {
+      setPreview({
+        ok: false,
+        error: `AI Classifier "${orphanedNode.name}": selected categories no longer exist in the library. Open the node and re-select categories.`,
+        actions: [],
+        warnings: [],
+        failedNodes: [],
+      })
+      return
+    }
+
     onRunStart()
     execution.clearResult()
     setIsPreviewing(true)
+
     try {
-      setPreview(await previewWorkflow(definition, rootPath))
+      const result = await previewWorkflow(definition, rootPath, resolvedNodes)
+      setPreview(result)
+      setPendingResolvedNodes(resolvedNodes)
     } finally {
       setIsPreviewing(false)
     }
   }
 
   function handleConfirm() {
-    if (!definition) return
+    if (!definition || !pendingResolvedNodes) return
     setPreview(null)
-    void execution.start(definition, rootPath)
+    const resolvedDefinition = { ...definition, nodes: pendingResolvedNodes }
+    void execution.start(resolvedDefinition, rootPath)
+    setPendingResolvedNodes(null)
+  }
+
+  function handleCancel() {
+    setPreview(null)
+    setPendingResolvedNodes(null)
   }
 
   const isBusy = isPreviewing || execution.isRunning || isExploring
@@ -102,7 +162,7 @@ export function RuntimeControls({ definition, rootPath, onRunStart, onRunComplet
         <WorkflowPreviewModal
           preview={preview}
           onConfirm={handleConfirm}
-          onCancel={() => setPreview(null)}
+          onCancel={handleCancel}
         />
       )}
 

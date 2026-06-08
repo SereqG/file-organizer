@@ -54,5 +54,5 @@ export function validateWorkflowItem(value: unknown): ValidationResult {
   if (value.ai !== undefined && !isObject(value.ai))
     return { ok: false, error: '"ai" must be an object' }
 
-  return { ok: true, item: value as WorkflowItem }
+  return { ok: true, item: value as unknown as WorkflowItem }
 }

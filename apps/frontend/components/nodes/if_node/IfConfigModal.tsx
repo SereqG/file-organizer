@@ -11,6 +11,7 @@ import { ErrorBoundary } from '@/components/shared/ErrorBoundary'
 import { ConfigErrorPanel } from '@/components/shared/ConfigErrorPanel'
 import { Modal } from '@/components/shared/Modal'
 
+
 interface IfConfigModalProps {
   nodeId: string
   onClose: () => void
@@ -87,6 +88,8 @@ export function IfConfigModal({ nodeId, onClose, onSave }: IfConfigModalProps) {
             </div>
 
             <EvaluationPreview conditions={conditions} strategy={strategy} />
+            <div className="mt-4">
+            </div>
           </div>
         </ErrorBoundary>
 

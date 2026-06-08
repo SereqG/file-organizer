@@ -45,3 +45,6 @@ Thumbs.db
 # Misc
 *.pem
 .vercel
+
+# Logs
+apps/backend/logs/

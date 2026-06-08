@@ -5,6 +5,7 @@ import { validateSwitchConfig } from '@/lib/workflow/validation/validateSwitchCo
 import { validateCreateFolderConfig } from '@/lib/workflow/validation/validateCreateFolderConfig'
 import { validateDeleteFolderConfig } from '@/lib/workflow/validation/validateDeleteFolderConfig'
 import { validateRenameFolderConfig } from '@/lib/workflow/validation/validateRenameFolderConfig'
+import { validateAiClassifierConfig } from '@/lib/workflow/validation/validateAiClassifierConfig'
 
 // Returns null when the workflow is ready to run, or a reason string when it is not.
 export function useWorkflowReadiness(definition: WorkflowDefinition | null): string | null {
@@ -44,6 +45,9 @@ export function useWorkflowReadiness(definition: WorkflowDefinition | null): str
         return 'Some nodes have incomplete configuration'
       }
       if (node.type === 'renameFolder' && !validateRenameFolderConfig(node.config).valid) {
+        return 'Some nodes have incomplete configuration'
+      }
+      if (node.type === 'ai_classifier' && !validateAiClassifierConfig(node.config).valid) {
         return 'Some nodes have incomplete configuration'
       }
     }

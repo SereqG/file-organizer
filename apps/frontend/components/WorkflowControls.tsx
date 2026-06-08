@@ -41,6 +41,8 @@ function buildGeneralNode(id: string, entry: NodeDescriptor, position: { x: numb
       return { id, type: 'copyFile', position, data: { label: entry.label } }
     case 'copyFolder':
       return { id, type: 'copyFolder', position, data: { label: entry.label } }
+    case 'ai_classifier':
+      return { id, type: 'ai_classifier', position, data: { label: entry.label } }
     default:
       return null
   }

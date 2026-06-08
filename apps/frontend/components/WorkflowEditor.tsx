@@ -8,6 +8,7 @@ import type { ExecutionFailedNode } from '@/lib/types/workflow'
 import { useWorkflowEditor } from '@/hooks/useWorkflowEditor'
 import { useExploreJob } from '@/hooks/useExploreJob'
 import { NodeConfigContext } from '@/lib/contexts/NodeConfigContext'
+import { CategoryLibraryProvider } from '@/lib/workflow/stores/categoryLibrary'
 import { WorkspaceIndicator } from './WorkspaceIndicator'
 import { BottomControls } from './BottomControls'
 import { DepthConfirmModal } from './DepthConfirmModal'
@@ -20,6 +21,7 @@ import { DeleteFileConfigModal } from './nodes/delete_file_node/DeleteFileConfig
 import { RenameFileConfigModal } from './nodes/rename_file_node/RenameFileConfigModal'
 import { MoveConfigModal } from './nodes/move_node/MoveConfigModal'
 import { CopyConfigModal } from './nodes/copy_node/CopyConfigModal'
+import { AiClassifierConfigModal } from './nodes/ai_classifier_node/AiClassifierConfigModal'
 import { WorkflowControls } from './WorkflowControls'
 
 interface WorkflowEditorProps {
@@ -30,7 +32,7 @@ interface WorkflowEditorProps {
 }
 
 export function WorkflowEditor({ workspacePath, workspaceTree, sessionId, onTreeRefresh }: WorkflowEditorProps) {
-  const { state: exploreState, startExplore, acceptPartialTree } = useExploreJob(sessionId, { autoStart: false })
+  const { state: exploreState, startExplore, acceptPartialTree } = useExploreJob(sessionId, { autoStart: false, rootPath: workspacePath })
 
   const isExploring = exploreState.phase === 'loading' || exploreState.phase === 'awaiting_confirmation'
 
@@ -56,6 +58,7 @@ export function WorkflowEditor({ workspacePath, workspaceTree, sessionId, onTree
     editingRenameFileNodeId,
     editingMoveNodeId,
     editingCopyNodeId,
+    editingAiClassifierNodeId,
     nodeConfigValue,
     onNodesChange,
     onEdgesChange,
@@ -73,6 +76,7 @@ export function WorkflowEditor({ workspacePath, workspaceTree, sessionId, onTree
     handleRenameFileConfigSave,
     handleMoveConfigSave,
     handleCopyConfigSave,
+    handleAiClassifierConfigSave,
     applyConfigRemapToCanvas,
     clearNodeErrors,
     markFailedNodes,
@@ -85,6 +89,7 @@ export function WorkflowEditor({ workspacePath, workspaceTree, sessionId, onTree
     closeRenameFileConfig,
     closeMoveConfig,
     closeCopyConfig,
+    closeAiClassifierConfig,
   } = useWorkflowEditor()
 
   const handleRunComplete = useCallback((failedNodes: ExecutionFailedNode[]) => {
@@ -94,157 +99,164 @@ export function WorkflowEditor({ workspacePath, workspaceTree, sessionId, onTree
 
   if (!mounted) return null
 
-  console.log('Rendering WorkflowEditor with nodes:', nodes, 'and edges:', edges)
-
   return createPortal(
+    <CategoryLibraryProvider>
     <NodeConfigContext.Provider value={nodeConfigValue}>
       <div className="fixed inset-0">
-        <WorkspaceIndicator path={workspacePath} tree={workspaceTree} />
-        <ReactFlow
-          className="w-full h-full"
-          nodes={nodes}
-          edges={edges}
-          nodeTypes={nodeTypes}
-          onNodesChange={onNodesChange}
-          onNodesDelete={handleNodesDelete}
-          onEdgesChange={onEdgesChange}
-          onEdgesDelete={handleEdgesDelete}
-          onConnect={handleConnect}
-          defaultEdgeOptions={{ type: 'smoothstep' }}
-          deleteKeyCode={['Backspace', 'Delete']}
-          nodeOrigin={[0.5, 0.5]}
-          nodesDraggable
-          nodesConnectable={true}
-          defaultViewport={{ x: 0, y: 0, zoom: 1 }}
-          onDrop={(e) => { e.preventDefault(); dropHandlerRef.current?.(e) }}
-          onDragOver={(e) => e.preventDefault()}
-        >
-          <Background
-            variant={BackgroundVariant.Dots}
-            gap={32}
-            size={1.5}
-            color="rgba(255, 255, 255, 0.4)"
-            bgColor="#080808"
-          />
-          <BottomControls
-            definition={definition}
-            rootPath={workspacePath}
-            onRunStart={clearNodeErrors}
-            onRunComplete={handleRunComplete}
-            onConfigRemap={applyConfigRemapToCanvas}
-            onReexplore={() => startExplore(false)}
-            isExploring={isExploring}
-          />
-          <WorkflowControls
-            hasTrigger={hasTrigger}
+          <WorkspaceIndicator path={workspacePath} tree={workspaceTree} />
+          <ReactFlow
+            className="w-full h-full"
+            nodes={nodes}
+            edges={edges}
+            nodeTypes={nodeTypes}
             onNodesChange={onNodesChange}
-            onTriggerAdded={handleTriggerAdded}
-            onGeneralNodeAdded={handleGeneralNodeAdded}
-            dropHandlerRef={dropHandlerRef}
+            onNodesDelete={handleNodesDelete}
+            onEdgesChange={onEdgesChange}
+            onEdgesDelete={handleEdgesDelete}
+            onConnect={handleConnect}
+            defaultEdgeOptions={{ type: 'smoothstep' }}
+            deleteKeyCode={['Backspace', 'Delete']}
+            nodeOrigin={[0.5, 0.5]}
+            nodesDraggable
+            nodesConnectable={true}
+            defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+            onDrop={(e) => { e.preventDefault(); dropHandlerRef.current?.(e) }}
+            onDragOver={(e) => e.preventDefault()}
+          >
+            <Background
+              variant={BackgroundVariant.Dots}
+              gap={32}
+              size={1.5}
+              color="rgba(255, 255, 255, 0.4)"
+              bgColor="#080808"
+            />
+            <BottomControls
+              definition={definition}
+              rootPath={workspacePath}
+              onRunStart={clearNodeErrors}
+              onRunComplete={handleRunComplete}
+              onConfigRemap={applyConfigRemapToCanvas}
+              onReexplore={() => startExplore(false)}
+              isExploring={isExploring}
+            />
+            <WorkflowControls
+              hasTrigger={hasTrigger}
+              onNodesChange={onNodesChange}
+              onTriggerAdded={handleTriggerAdded}
+              onGeneralNodeAdded={handleGeneralNodeAdded}
+              dropHandlerRef={dropHandlerRef}
+            />
+            {editingIfNodeId && (
+              <IfConfigModal
+                nodeId={editingIfNodeId}
+                onClose={closeIfConfig}
+                onSave={handleIfConfigSave}
+              />
+            )}
+            {editingSwitchNodeId && (
+              <SwitchConfigModal
+                nodeId={editingSwitchNodeId}
+                onClose={closeSwitchConfig}
+                onSave={handleSwitchConfigSave}
+              />
+            )}
+            {editingCreateFolderNodeId && (
+              <CreateFolderConfigModal
+                nodeId={editingCreateFolderNodeId}
+                workspaceTree={workspaceTree}
+                onClose={closeCreateFolderConfig}
+                onSave={handleCreateFolderConfigSave}
+              />
+            )}
+            {editingDeleteFolderNodeId && (
+              <DeleteFolderConfigModal
+                nodeId={editingDeleteFolderNodeId}
+                workspaceTree={workspaceTree}
+                onClose={closeDeleteFolderConfig}
+                onSave={handleDeleteFolderConfigSave}
+              />
+            )}
+            {editingRenameFolderNodeId && (
+              <RenameFolderConfigModal
+                nodeId={editingRenameFolderNodeId}
+                workspaceTree={workspaceTree}
+                onClose={closeRenameFolderConfig}
+                onSave={handleRenameFolderConfigSave}
+              />
+            )}
+            {editingDeleteFileNodeId && (
+              <DeleteFileConfigModal
+                nodeId={editingDeleteFileNodeId}
+                workspaceTree={workspaceTree}
+                onClose={closeDeleteFileConfig}
+                onSave={handleDeleteFileConfigSave}
+              />
+            )}
+            {editingRenameFileNodeId && (
+              <RenameFileConfigModal
+                nodeId={editingRenameFileNodeId}
+                workspaceTree={workspaceTree}
+                onClose={closeRenameFileConfig}
+                onSave={handleRenameFileConfigSave}
+              />
+            )}
+            {editingMoveNodeId && (
+              <MoveConfigModal
+                nodeId={editingMoveNodeId}
+                workspaceTree={workspaceTree}
+                onClose={closeMoveConfig}
+                onSave={handleMoveConfigSave}
+              />
+            )}
+            {editingCopyNodeId && (
+              <CopyConfigModal
+                nodeId={editingCopyNodeId}
+                workspaceTree={workspaceTree}
+                onClose={closeCopyConfig}
+                onSave={handleCopyConfigSave}
+              />
+            )}
+            {editingAiClassifierNodeId && (
+              <AiClassifierConfigModal
+                nodeId={editingAiClassifierNodeId}
+                onClose={closeAiClassifierConfig}
+                onSave={handleAiClassifierConfigSave}
+              />
+            )}
+          </ReactFlow>
+
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              background: [
+                'radial-gradient(ellipse 60% 30% at 50% 0%,   rgba(249,115,22,0.18) 0%, transparent 100%)',
+                'radial-gradient(ellipse 60% 30% at 50% 100%, rgba(249,115,22,0.18) 0%, transparent 100%)',
+                'radial-gradient(ellipse 30% 60% at 0%   50%, rgba(249,115,22,0.14) 0%, transparent 100%)',
+                'radial-gradient(ellipse 30% 60% at 100% 50%, rgba(249,115,22,0.14) 0%, transparent 100%)',
+              ].join(', '),
+            }}
           />
-          {editingIfNodeId && (
-            <IfConfigModal
-              nodeId={editingIfNodeId}
-              onClose={closeIfConfig}
-              onSave={handleIfConfigSave}
-            />
-          )}
-          {editingSwitchNodeId && (
-            <SwitchConfigModal
-              nodeId={editingSwitchNodeId}
-              onClose={closeSwitchConfig}
-              onSave={handleSwitchConfigSave}
-            />
-          )}
-          {editingCreateFolderNodeId && (
-            <CreateFolderConfigModal
-              nodeId={editingCreateFolderNodeId}
-              workspaceTree={workspaceTree}
-              onClose={closeCreateFolderConfig}
-              onSave={handleCreateFolderConfigSave}
-            />
-          )}
-          {editingDeleteFolderNodeId && (
-            <DeleteFolderConfigModal
-              nodeId={editingDeleteFolderNodeId}
-              workspaceTree={workspaceTree}
-              onClose={closeDeleteFolderConfig}
-              onSave={handleDeleteFolderConfigSave}
-            />
-          )}
-          {editingRenameFolderNodeId && (
-            <RenameFolderConfigModal
-              nodeId={editingRenameFolderNodeId}
-              workspaceTree={workspaceTree}
-              onClose={closeRenameFolderConfig}
-              onSave={handleRenameFolderConfigSave}
-            />
-          )}
-          {editingDeleteFileNodeId && (
-            <DeleteFileConfigModal
-              nodeId={editingDeleteFileNodeId}
-              workspaceTree={workspaceTree}
-              onClose={closeDeleteFileConfig}
-              onSave={handleDeleteFileConfigSave}
-            />
-          )}
-          {editingRenameFileNodeId && (
-            <RenameFileConfigModal
-              nodeId={editingRenameFileNodeId}
-              workspaceTree={workspaceTree}
-              onClose={closeRenameFileConfig}
-              onSave={handleRenameFileConfigSave}
-            />
-          )}
-          {editingMoveNodeId && (
-            <MoveConfigModal
-              nodeId={editingMoveNodeId}
-              workspaceTree={workspaceTree}
-              onClose={closeMoveConfig}
-              onSave={handleMoveConfigSave}
-            />
-          )}
-          {editingCopyNodeId && (
-            <CopyConfigModal
-              nodeId={editingCopyNodeId}
-              workspaceTree={workspaceTree}
-              onClose={closeCopyConfig}
-              onSave={handleCopyConfigSave}
-            />
-          )}
-        </ReactFlow>
 
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background: [
-              'radial-gradient(ellipse 60% 30% at 50% 0%,   rgba(249,115,22,0.18) 0%, transparent 100%)',
-              'radial-gradient(ellipse 60% 30% at 50% 100%, rgba(249,115,22,0.18) 0%, transparent 100%)',
-              'radial-gradient(ellipse 30% 60% at 0%   50%, rgba(249,115,22,0.14) 0%, transparent 100%)',
-              'radial-gradient(ellipse 30% 60% at 100% 50%, rgba(249,115,22,0.14) 0%, transparent 100%)',
-            ].join(', '),
-          }}
-        />
-
-        {exploreState.phase === 'loading' && (
-          <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/80 px-6 py-4">
-              <span className="size-4 rounded-full border-2 border-white/10 border-t-orange-400/60 animate-spin" />
-              <span className="text-sm text-white/70">File system exploration, please wait...</span>
+          {exploreState.phase === 'loading' && (
+            <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+              <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/80 px-6 py-4">
+                <span className="size-4 rounded-full border-2 border-white/10 border-t-orange-400/60 animate-spin" />
+                <span className="text-sm text-white/70">File system exploration, please wait...</span>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {exploreState.phase === 'awaiting_confirmation' && (
-          <DepthConfirmModal
-            detectedDepth={exploreState.detectedDepth}
-            directoryName={exploreState.directoryName}
-            onConfirm={() => startExplore(true)}
-            onCancel={() => acceptPartialTree(exploreState.partialTree)}
-          />
-        )}
-      </div>
-    </NodeConfigContext.Provider>,
+          {exploreState.phase === 'awaiting_confirmation' && (
+            <DepthConfirmModal
+              detectedDepth={exploreState.detectedDepth}
+              directoryName={exploreState.directoryName}
+              onConfirm={() => startExplore(true)}
+              onCancel={() => acceptPartialTree(exploreState.partialTree)}
+            />
+          )}
+        </div>
+    </NodeConfigContext.Provider>
+    </CategoryLibraryProvider>,
     document.body
   )
 }

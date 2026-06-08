@@ -19,6 +19,7 @@ import { ConfigErrorPanel } from '@/components/shared/ConfigErrorPanel'
 import { Modal } from '@/components/shared/Modal'
 import { LuPlus, LuTrash2 } from 'react-icons/lu'
 
+
 interface SwitchConfigModalProps {
   nodeId: string
   onClose: () => void
