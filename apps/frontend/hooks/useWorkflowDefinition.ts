@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import type { Connection } from '@xyflow/react'
-import type { ConfigRemap, CopyFileNode, CopyFolderNode, CreateFolderNode, DeleteFileNode, DeleteFolderNode, IfNode, MoveFileNode, MoveFolderNode, RenameFileNode, RenameFolderNode, SwitchCase, SwitchNode, WorkflowDefinition, WorkflowEdge, WorkflowTriggerNode } from '@/lib/types/workflow'
+import type { AiClassifierNode, ConfigRemap, CopyFileNode, CopyFolderNode, CreateFolderNode, DeleteFileNode, DeleteFolderNode, IfNode, MoveFileNode, MoveFolderNode, RenameFileNode, RenameFolderNode, SwitchCase, SwitchNode, WorkflowDefinition, WorkflowEdge, WorkflowTriggerNode } from '@/lib/types/workflow'
 import type { TriggerId } from '@/components/TriggerSelectModal'
 import { remapNodeConfig } from '@/lib/workflow/utils/applyConfigRemap'
 
@@ -184,8 +184,28 @@ function buildCopyFolderNode(id: string, label: string): CopyFolderNode {
   }
 }
 
+function buildAiClassifierNode(id: string, label: string): AiClassifierNode {
+  return {
+    id,
+    type: 'ai_classifier',
+    category: 'general',
+    name: label,
+    version: 1,
+    config: { categoryIds: [], allowDuplicate: false },
+  }
+}
+
 export function useWorkflowDefinition() {
-  const [definition, setDefinition] = useState<WorkflowDefinition | null>(null)
+  const [definition, setDefinitionRaw] = useState<WorkflowDefinition | null>(null)
+  const [lastModifiedAt, setLastModifiedAt] = useState<number | null>(null)
+
+  const setDefinition = useCallback(
+    (updater: WorkflowDefinition | null | ((prev: WorkflowDefinition | null) => WorkflowDefinition | null)) => {
+      setDefinitionRaw(updater)
+      setLastModifiedAt(Date.now())
+    },
+    [],
+  )
 
   const addTrigger = useCallback((triggerId: TriggerId, rfNodeId: string) => {
     const trigger = buildTriggerNode(triggerId, rfNodeId)
@@ -210,6 +230,7 @@ export function useWorkflowDefinition() {
       if (nodeType === 'moveFolder') return { ...prev, nodes: [...prev.nodes, buildMoveFolderNode(id, label)] }
       if (nodeType === 'copyFile') return { ...prev, nodes: [...prev.nodes, buildCopyFileNode(id, label)] }
       if (nodeType === 'copyFolder') return { ...prev, nodes: [...prev.nodes, buildCopyFolderNode(id, label)] }
+      if (nodeType === 'ai_classifier') return { ...prev, nodes: [...prev.nodes, buildAiClassifierNode(id, label)] }
       return prev
     })
   }, [])
@@ -217,7 +238,11 @@ export function useWorkflowDefinition() {
   const removeNode = useCallback((id: string) => {
     setDefinition((prev) => {
       if (!prev) return prev
-      return { ...prev, nodes: prev.nodes.filter((n) => n.id !== id) }
+      return {
+        ...prev,
+        nodes: prev.nodes.filter((n) => n.id !== id),
+        edges: prev.edges.filter((e) => e.source !== id && e.target !== id),
+      }
     })
   }, [])
 
@@ -313,6 +338,16 @@ export function useWorkflowDefinition() {
     })
   }, [])
 
+  const updateAiClassifierNodeConfig = useCallback((id: string, config: AiClassifierNode['config']) => {
+    setDefinition((prev) => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        nodes: prev.nodes.map((n) => (n.id === id && n.type === 'ai_classifier' ? { ...n, config } : n)),
+      }
+    })
+  }, [setDefinition])
+
   // Apply a Move's returned path remaps to every node's config so the canvas reflects relocations.
   const applyConfigRemap = useCallback((remaps: ConfigRemap[]) => {
     if (remaps.length === 0) return
@@ -348,6 +383,7 @@ export function useWorkflowDefinition() {
 
   return {
     definition,
+    lastModifiedAt,
     addTrigger,
     removeTrigger,
     addGeneralNode,
@@ -361,6 +397,7 @@ export function useWorkflowDefinition() {
     updateRenameFileNodeConfig,
     updateMoveNodeConfig,
     updateCopyNodeConfig,
+    updateAiClassifierNodeConfig,
     applyConfigRemap,
     addWorkflowEdge,
     removeWorkflowEdge,

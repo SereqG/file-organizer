@@ -8,6 +8,7 @@ dependencies = [
     "pydantic>=2.13",
     "pydantic-settings>=2.11",
     "python-dotenv>=1.2",
+    "openai>=1.0",
 ]
 
 [project.optional-dependencies]

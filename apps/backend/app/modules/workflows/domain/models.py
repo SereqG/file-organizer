@@ -92,7 +92,6 @@ class ExecutionContext:
     started_at: datetime = field(default_factory=datetime.utcnow)
     root_path: str = ""
     items: list[WorkflowItem] = field(default_factory=list)
-    variables: dict[str, Any] = field(default_factory=dict)
     logs: list[Any] = field(default_factory=list)
     outputs: dict[str, Any] = field(default_factory=dict)
     warnings: list[ExecutionWarning] = field(default_factory=list)

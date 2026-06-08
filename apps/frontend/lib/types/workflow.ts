@@ -24,6 +24,7 @@ export type WorkflowNodeType =
   | 'moveFolder'
   | 'copyFile'
   | 'copyFolder'
+  | 'ai_classifier'
   | 'loop'
   | 'transform';
 
@@ -121,6 +122,9 @@ export interface IfNode extends BaseGeneralNode {
 // Output handle id for the switch node's always-present "everything else" branch. Distinct from
 // any case id (case ids come from nextId('case')), and mirrored by the backend BRANCH_DEFAULT.
 export const SWITCH_DEFAULT_HANDLE = 'default';
+
+// Output handle id for the AI classifier's always-present unclassified branch.
+export const AI_CLASSIFIER_UNCLASSIFIED_HANDLE = '_unclassified';
 export const MIN_SWITCH_CASES = 2;
 export const MAX_SWITCH_CASES = 8;
 
@@ -221,7 +225,15 @@ export interface CopyFolderNode extends BaseGeneralNode {
   };
 }
 
-export type WorkflowNode = IfNode | SwitchNode | CreateFolderNode | DeleteFolderNode | RenameFolderNode | DeleteFileNode | RenameFileNode | MoveFileNode | MoveFolderNode | CopyFileNode | CopyFolderNode;
+export interface AiClassifierNode extends BaseGeneralNode {
+  type: 'ai_classifier';
+  config: {
+    categoryIds: string[];
+    allowDuplicate: boolean;
+  };
+}
+
+export type WorkflowNode = IfNode | SwitchNode | CreateFolderNode | DeleteFolderNode | RenameFolderNode | DeleteFileNode | RenameFileNode | MoveFileNode | MoveFolderNode | CopyFileNode | CopyFolderNode | AiClassifierNode;
 
 export interface WorkflowItemStat {
   size: number;

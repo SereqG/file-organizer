@@ -12,6 +12,7 @@ import { ErrorBoundary } from '@/components/shared/ErrorBoundary'
 import { ConfigErrorPanel } from '@/components/shared/ConfigErrorPanel'
 import { Modal } from '@/components/shared/Modal'
 
+
 interface RenameFolderConfigModalProps {
   nodeId: string
   workspaceTree: FileTreeNode

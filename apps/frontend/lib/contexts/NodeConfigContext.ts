@@ -12,6 +12,7 @@ export interface NodeConfigContextValue {
   openRenameFileNodeConfig: (nodeId: string) => void
   openMoveNodeConfig: (nodeId: string) => void
   openCopyNodeConfig: (nodeId: string) => void
+  openAiClassifierNodeConfig: (nodeId: string) => void
 }
 
 export const NodeConfigContext = createContext<NodeConfigContextValue | null>(null)

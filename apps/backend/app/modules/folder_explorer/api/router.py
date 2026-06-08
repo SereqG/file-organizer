@@ -1,3 +1,5 @@
+from typing import Optional
+
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -11,6 +13,7 @@ router = APIRouter(prefix="/folder_explorer/api", tags=["folder_explorer"])
 
 class ExploreRequest(BaseModel):
     session_id: str
+    root_path: Optional[str] = None
     extended_depth: bool = False
 
 
@@ -20,7 +23,7 @@ class ExploreStartResponse(BaseModel):
 
 @router.post("/explore", response_model=ExploreStartResponse)
 async def post_explore(body: ExploreRequest):
-    job = await start_explore(body.session_id, body.extended_depth)
+    job = await start_explore(body.session_id, body.extended_depth, body.root_path)
 
     if job is None:
         return JSONResponse(

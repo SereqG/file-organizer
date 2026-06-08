@@ -1,4 +1,4 @@
-import { LuMousePointer2, LuClock, LuGitBranch, LuSplit, LuFolderPlus, LuFolderX, LuFolderPen, LuFileX, LuFilePen, LuFolderInput, LuFileInput, LuCopy, LuCopyPlus } from 'react-icons/lu'
+import { LuMousePointer2, LuClock, LuGitBranch, LuSplit, LuFolderPlus, LuFolderX, LuFolderPen, LuFileX, LuFilePen, LuFolderInput, LuFileInput, LuCopy, LuCopyPlus, LuTags } from 'react-icons/lu'
 import type { NodeKind } from '@/lib/types/workflowNodeDescriptor'
 import type React from 'react'
 
@@ -118,6 +118,17 @@ export const NODE_CATEGORIES: NodeCategory[] = [
         nodeType: 'copyFile',
         label: 'Copy File',
         icon: <LuCopyPlus size={14} />,
+      },
+    ],
+  },
+  {
+    name: 'AI Nodes',
+    nodes: [
+      {
+        kind: 'create',
+        nodeType: 'ai_classifier',
+        label: 'AI Classifier',
+        icon: <LuTags size={14} />,
       },
     ],
   },

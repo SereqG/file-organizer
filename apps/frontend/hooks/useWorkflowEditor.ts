@@ -4,9 +4,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNodesState, useEdgesState, addEdge } from '@xyflow/react'
 import type { Edge, Connection } from '@xyflow/react'
 import type { TriggerId } from '@/components/TriggerSelectModal'
-import type { ConfigRemap, CopyFileNode as CopyNodeConfigType, CreateFolderNode as CreateFolderNodeType, DeleteFileNode as DeleteFileNodeType, DeleteFolderNode as DeleteFolderNodeType, ExecutionFailedNode, IfNode as IfNodeType, MoveFileNode as MoveNodeConfigType, RenameFileNode as RenameFileNodeType, RenameFolderNode as RenameFolderNodeType, SwitchNode as SwitchNodeType } from '@/lib/types/workflow'
-import { SWITCH_DEFAULT_HANDLE } from '@/lib/types/workflow'
+import type { AiClassifierNode as AiClassifierNodeType, ConfigRemap, CopyFileNode as CopyNodeConfigType, CreateFolderNode as CreateFolderNodeType, DeleteFileNode as DeleteFileNodeType, DeleteFolderNode as DeleteFolderNodeType, ExecutionFailedNode, IfNode as IfNodeType, MoveFileNode as MoveNodeConfigType, RenameFileNode as RenameFileNodeType, RenameFolderNode as RenameFolderNodeType, SwitchNode as SwitchNodeType } from '@/lib/types/workflow'
+import { AI_CLASSIFIER_UNCLASSIFIED_HANDLE, SWITCH_DEFAULT_HANDLE } from '@/lib/types/workflow'
 import { SWITCH_DEFAULT_COLOR, switchOutputColor } from '@/lib/workflow/utils/switchColors'
+import { AI_CLASSIFIER_UNCLASSIFIED_COLOR, aiClassifierOutputColor } from '@/lib/workflow/utils/aiClassifierColors'
 import { useWorkflowDefinition } from '@/hooks/useWorkflowDefinition'
 import { remapNodeConfig } from '@/lib/workflow/utils/applyConfigRemap'
 import { TriggerNode } from '@/components/nodes/trigger_node/TriggerNode'
@@ -29,13 +30,13 @@ import { MoveNode } from '@/components/nodes/move_node/MoveNode'
 import type { MoveRFNode } from '@/components/nodes/move_node/MoveNode'
 import { CopyNode } from '@/components/nodes/copy_node/CopyNode'
 import type { CopyRFNode } from '@/components/nodes/copy_node/CopyNode'
+import { AiClassifierNode } from '@/components/nodes/ai_classifier_node/AiClassifierNode'
+import type { AiClassifierRFNode } from '@/components/nodes/ai_classifier_node/AiClassifierNode'
 
-export type AppNode = TriggerRFNode | IfRFNode | SwitchRFNode | CreateFolderRFNode | DeleteFolderRFNode | RenameFolderRFNode | DeleteFileRFNode | RenameFileRFNode | MoveRFNode | CopyRFNode
+export type AppNode = TriggerRFNode | IfRFNode | SwitchRFNode | CreateFolderRFNode | DeleteFolderRFNode | RenameFolderRFNode | DeleteFileRFNode | RenameFileRFNode | MoveRFNode | CopyRFNode | AiClassifierRFNode
 
-const NODE_TYPES = { trigger: TriggerNode, if: IfNode, switch: SwitchNode, createFolder: CreateFolderNode, deleteFolder: DeleteFolderNode, renameFolder: RenameFolderNode, deleteFile: DeleteFileNode, renameFile: RenameFileNode, moveFile: MoveNode, moveFolder: MoveNode, copyFile: CopyNode, copyFolder: CopyNode }
+const NODE_TYPES = { trigger: TriggerNode, if: IfNode, switch: SwitchNode, createFolder: CreateFolderNode, deleteFolder: DeleteFolderNode, renameFolder: RenameFolderNode, deleteFile: DeleteFileNode, renameFile: RenameFileNode, moveFile: MoveNode, moveFolder: MoveNode, copyFile: CopyNode, copyFolder: CopyNode, ai_classifier: AiClassifierNode }
 
-// Color the edge leaving a switch output so the trace matches its handle. Returns undefined for
-// non-switch sources (default React Flow styling).
 function switchEdgeStyle(nodes: AppNode[], connection: Connection): { stroke: string } | undefined {
   const source = nodes.find((n) => n.id === connection.source)
   if (source?.type !== 'switch') return undefined
@@ -43,6 +44,15 @@ function switchEdgeStyle(nodes: AppNode[], connection: Connection): { stroke: st
   if (!handle || handle === SWITCH_DEFAULT_HANDLE) return { stroke: SWITCH_DEFAULT_COLOR }
   const index = (source.data.config?.cases ?? []).findIndex((c) => c.id === handle)
   return { stroke: index >= 0 ? switchOutputColor(index) : SWITCH_DEFAULT_COLOR }
+}
+
+function aiClassifierEdgeStyle(nodes: AppNode[], connection: Connection): { stroke: string } | undefined {
+  const source = nodes.find((n) => n.id === connection.source)
+  if (source?.type !== 'ai_classifier') return undefined
+  const handle = connection.sourceHandle
+  if (!handle || handle === AI_CLASSIFIER_UNCLASSIFIED_HANDLE) return { stroke: AI_CLASSIFIER_UNCLASSIFIED_COLOR }
+  const index = (source.data.config?.categoryIds ?? []).findIndex((id) => id === handle)
+  return { stroke: index >= 0 ? aiClassifierOutputColor(index) : AI_CLASSIFIER_UNCLASSIFIED_COLOR }
 }
 
 export function useWorkflowEditor() {
@@ -61,9 +71,11 @@ export function useWorkflowEditor() {
   const [editingRenameFileNodeId, setEditingRenameFileNodeId] = useState<string | null>(null)
   const [editingMoveNodeId, setEditingMoveNodeId] = useState<string | null>(null)
   const [editingCopyNodeId, setEditingCopyNodeId] = useState<string | null>(null)
+  const [editingAiClassifierNodeId, setEditingAiClassifierNodeId] = useState<string | null>(null)
 
   const {
     definition,
+    lastModifiedAt,
     addTrigger,
     removeTrigger,
     addGeneralNode,
@@ -77,6 +89,7 @@ export function useWorkflowEditor() {
     updateRenameFileNodeConfig,
     updateMoveNodeConfig,
     updateCopyNodeConfig,
+    updateAiClassifierNodeConfig,
     applyConfigRemap,
     addWorkflowEdge,
     removeWorkflowEdge,
@@ -102,7 +115,7 @@ export function useWorkflowEditor() {
 
   const handleConnect = useCallback((connection: Connection) => {
     const edgeId = `${connection.source}-${connection.sourceHandle ?? 'default'}->${connection.target}`
-    const style = switchEdgeStyle(nodes, connection)
+    const style = switchEdgeStyle(nodes, connection) ?? aiClassifierEdgeStyle(nodes, connection)
     setEdges((prev) => addEdge({ ...connection, id: edgeId, ...(style ? { style } : {}) }, prev))
     addWorkflowEdge(connection)
   }, [nodes, setEdges, addWorkflowEdge])
@@ -123,6 +136,7 @@ export function useWorkflowEditor() {
     openRenameFileNodeConfig: (id: string) => setEditingRenameFileNodeId(id),
     openMoveNodeConfig: (id: string) => setEditingMoveNodeId(id),
     openCopyNodeConfig: (id: string) => setEditingCopyNodeId(id),
+    openAiClassifierNodeConfig: (id: string) => setEditingAiClassifierNodeId(id),
   }), [])
 
   const handleIfConfigSave = useCallback((config: IfNodeType['config']) => {
@@ -212,6 +226,31 @@ export function useWorkflowEditor() {
     updateCopyNodeConfig(editingCopyNodeId, config)
   }, [editingCopyNodeId, setNodes, updateCopyNodeConfig])
 
+  const handleAiClassifierConfigSave = useCallback((config: AiClassifierNodeType['config']) => {
+    if (!editingAiClassifierNodeId) return
+    const nodeId = editingAiClassifierNodeId
+
+    // Prune edges whose source handle is a category that was removed.
+    const catIds = new Set(config.categoryIds)
+    const staleEdges = edges.filter(
+      (e) =>
+        e.source === nodeId &&
+        e.sourceHandle &&
+        e.sourceHandle !== AI_CLASSIFIER_UNCLASSIFIED_HANDLE &&
+        !catIds.has(e.sourceHandle),
+    )
+    if (staleEdges.length > 0) {
+      const staleIds = new Set(staleEdges.map((e) => e.id))
+      setEdges((prev) => prev.filter((e) => !staleIds.has(e.id)))
+      staleEdges.forEach((e) => removeWorkflowEdge(e.id))
+    }
+
+    setNodes((prev) => prev.map((n) =>
+      n.id === nodeId ? { ...n, data: { ...n.data, config } } as AppNode : n
+    ))
+    updateAiClassifierNodeConfig(nodeId, config)
+  }, [editingAiClassifierNodeId, edges, setEdges, setNodes, removeWorkflowEdge, updateAiClassifierNodeConfig])
+
   // After a run, apply the backend's path remaps to both the canvas nodes and the definition.
   const applyConfigRemapToCanvas = useCallback((remaps: ConfigRemap[]) => {
     if (remaps.length === 0) return
@@ -243,6 +282,7 @@ export function useWorkflowEditor() {
   return {
     mounted,
     definition,
+    lastModifiedAt,
     nodes,
     edges,
     nodeTypes,
@@ -257,6 +297,7 @@ export function useWorkflowEditor() {
     editingRenameFileNodeId,
     editingMoveNodeId,
     editingCopyNodeId,
+    editingAiClassifierNodeId,
     nodeConfigValue,
     onNodesChange,
     onEdgesChange,
@@ -274,6 +315,7 @@ export function useWorkflowEditor() {
     handleRenameFileConfigSave,
     handleMoveConfigSave,
     handleCopyConfigSave,
+    handleAiClassifierConfigSave,
     applyConfigRemapToCanvas,
     clearNodeErrors,
     markFailedNodes,
@@ -286,5 +328,6 @@ export function useWorkflowEditor() {
     closeRenameFileConfig: () => setEditingRenameFileNodeId(null),
     closeMoveConfig: () => setEditingMoveNodeId(null),
     closeCopyConfig: () => setEditingCopyNodeId(null),
+    closeAiClassifierConfig: () => setEditingAiClassifierNodeId(null),
   }
 }
