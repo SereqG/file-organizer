@@ -8,7 +8,8 @@ import { AI_CLASSIFIER_UNCLASSIFIED_HANDLE } from '@/lib/types/workflow'
 import { aiClassifierOutputColor, AI_CLASSIFIER_UNCLASSIFIED_COLOR } from '@/lib/workflow/utils/aiClassifierColors'
 import { useCategoryLibrary } from '@/lib/workflow/stores/categoryLibrary'
 import { useNodeConfig } from '@/lib/contexts/NodeConfigContext'
-import { LuTrash2, LuTags } from 'react-icons/lu'
+import { useWorkflowRun } from '@/lib/contexts/WorkflowRunContext'
+import { LuTrash2, LuTags, LuLoaderCircle } from 'react-icons/lu'
 
 export interface AiClassifierNodeData extends Record<string, unknown> {
   label: string
@@ -44,6 +45,7 @@ export function AiClassifierNode({ id, data }: NodeProps<AiClassifierRFNode>) {
   const { deleteElements } = useReactFlow()
   const { openAiClassifierNodeConfig } = useNodeConfig()
   const { getCategoryById } = useCategoryLibrary()
+  const { currentNodeId } = useWorkflowRun()
 
   const handleDelete = useCallback(
     (e: React.MouseEvent) => {
@@ -62,6 +64,7 @@ export function AiClassifierNode({ id, data }: NodeProps<AiClassifierRFNode>) {
   const outputs = buildOutputs(categoryIds, getCategoryById)
   const configured = categoryIds.length > 0
   const hasError = !!data.executionError
+  const isActive = currentNodeId === id
 
   return (
     <div
@@ -93,6 +96,12 @@ export function AiClassifierNode({ id, data }: NodeProps<AiClassifierRFNode>) {
         <div className="absolute -top-2 -right-2 flex h-4 w-4 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white text-[8px] font-bold shadow">
           ✦
         </div>
+
+        {isActive && (
+          <div className="absolute top-1.5 left-1.5">
+            <LuLoaderCircle size={12} className="animate-spin text-white/60" />
+          </div>
+        )}
 
         <button
           onClick={handleDelete}

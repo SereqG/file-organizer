@@ -1,3 +1,7 @@
+'use client'
+
+import { useWorkflowRun } from '@/lib/contexts/WorkflowRunContext'
+
 interface ActionButtonsProps {
   onCancel: () => void
   onSave: () => void
@@ -5,6 +9,9 @@ interface ActionButtonsProps {
 }
 
 export function ActionButtons({ onCancel, onSave, saveDisabled }: ActionButtonsProps) {
+  const { isRunning } = useWorkflowRun()
+  const disabled = saveDisabled || isRunning
+
   return (
     <>
       <button
@@ -15,7 +22,8 @@ export function ActionButtons({ onCancel, onSave, saveDisabled }: ActionButtonsP
       </button>
       <button
         onClick={onSave}
-        disabled={saveDisabled}
+        disabled={disabled}
+        title={isRunning ? 'Cannot save while workflow is running' : undefined}
         className="rounded-md border border-sky-500/60 bg-sky-500/15 px-3 py-1 text-xs text-sky-300 transition-colors hover:bg-sky-500/25 disabled:cursor-not-allowed disabled:opacity-40"
       >
         Save

@@ -5,7 +5,8 @@ import { Handle, Position, useReactFlow } from '@xyflow/react'
 import type { Node, NodeProps } from '@xyflow/react'
 import type { ConditionGroup, IfNode as IfNodeType } from '@/lib/types/workflow'
 import { useNodeConfig } from '@/lib/contexts/NodeConfigContext'
-import { LuTrash2, LuGitBranch } from 'react-icons/lu'
+import { useWorkflowRun } from '@/lib/contexts/WorkflowRunContext'
+import { LuTrash2, LuGitBranch, LuLoaderCircle } from 'react-icons/lu'
 
 export interface IfNodeData extends Record<string, unknown> {
   label: string
@@ -27,6 +28,7 @@ function countConditions(group: ConditionGroup): number {
 export function IfNode({ id, data }: NodeProps<IfRFNode>) {
   const { deleteElements } = useReactFlow()
   const { openIfNodeConfig } = useNodeConfig()
+  const { currentNodeId } = useWorkflowRun()
 
   const handleDelete = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
@@ -40,6 +42,7 @@ export function IfNode({ id, data }: NodeProps<IfRFNode>) {
   const conditionCount = data.config ? countConditions(data.config.conditions) : 0
   const configured = conditionCount > 0
   const hasError = !!data.executionError
+  const isActive = currentNodeId === id
 
   return (
     <div
@@ -53,6 +56,11 @@ export function IfNode({ id, data }: NodeProps<IfRFNode>) {
       >
         <LuTrash2 size={10} />
       </button>
+      {isActive && (
+        <div className="absolute top-1.5 left-1.5">
+          <LuLoaderCircle size={12} className="animate-spin text-white/60" />
+        </div>
+      )}
 
       <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md border border-orange-500/30 bg-orange-500/10 text-orange-400">
         <LuGitBranch size={16} />

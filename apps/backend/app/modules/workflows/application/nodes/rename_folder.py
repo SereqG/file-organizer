@@ -1,3 +1,4 @@
+import time
 from pathlib import Path
 from typing import Callable, Optional
 
@@ -6,7 +7,7 @@ from app.modules.workflows.application.nodes.folder_helpers import (
     resolve_incremental_name,
 )
 from app.modules.workflows.application.nodes.transfer_helpers import rewrite_item_paths
-from app.modules.workflows.domain.models import ExecutionContext, PlannedAction, WorkflowNode
+from app.modules.workflows.domain.models import ExecutionContext, LogEntry, PlannedAction, WorkflowNode
 
 
 def execute_rename_folder(node: WorkflowNode, context: ExecutionContext, scope: set[str]) -> tuple[Optional[str], Optional[Callable], Optional[Callable]]:
@@ -43,6 +44,11 @@ def execute_rename_folder(node: WorkflowNode, context: ExecutionContext, scope: 
     context.actions.append(
         PlannedAction(node.id, "rename", f"Rename folder {old_prefix} to {target.name}", item_path=old_prefix, target_path=new_prefix)
     )
+    context.log_entries.append(LogEntry(
+        node_id=node.id, node_name=node.name, kind="renamed",
+        item_name=source.name, message=None,
+        elapsed=time.time() - context.start_time,
+    ))
 
     def undo() -> None:
         target.rename(source)

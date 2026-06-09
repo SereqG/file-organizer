@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { ConfigRemap, ExecutionResult, PendingDecision, WorkflowDefinition } from '@/lib/types/workflow'
+import type { ConfigRemap, ExecutionResult, LogEntry, PendingDecision, WorkflowDefinition } from '@/lib/types/workflow'
 
 const INITIAL_POLL_MS = 500
 const BACKOFF_FACTOR = 1.4
@@ -12,13 +12,16 @@ interface ExecutionState {
   isRunning: boolean
   pendingDecision: PendingDecision | null
   result: ExecutionResult | null
+  currentNodeId: string | null
+  logEntries: LogEntry[]
 }
 
-const IDLE: ExecutionState = { isRunning: false, pendingDecision: null, result: null }
+const IDLE: ExecutionState = { isRunning: false, pendingDecision: null, result: null, currentNodeId: null, logEntries: [] }
 
 /**
  * Drives a resumable workflow run: starts it, polls status with backoff, surfaces a pending decision
  * when the engine suspends, and posts the user's choice (or a cancel) to resume.
+ * Log entries stream in real time via SSE; status/decision changes come from the poll.
  */
 export function useWorkflowExecution() {
   const [state, setState] = useState<ExecutionState>(IDLE)
@@ -27,6 +30,55 @@ export function useWorkflowExecution() {
   const pollRef = useRef<() => void>(() => {})
   const attemptRef = useRef(0)
   const startedAtRef = useRef(0)
+  const [streamExecId, setStreamExecId] = useState<string | null>(null)
+
+  // Real-time log streaming via SSE fetch stream.
+  useEffect(() => {
+    if (!streamExecId) return
+
+    let active = true
+    const controller = new AbortController()
+
+    async function stream() {
+      let res: Response
+      try {
+        res = await fetch(`/api/workflows/execute/${streamExecId}/logs`, {
+          signal: controller.signal,
+        })
+      } catch {
+        return
+      }
+
+      if (!res.body) return
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      try {
+        while (active) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buffer += decoder.decode(value, { stream: true })
+          const lines = buffer.split('\n')
+          buffer = lines.pop() ?? ''
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue
+            try {
+              const entry = JSON.parse(line.slice(6)) as LogEntry
+              setState((s) => ({ ...s, logEntries: [...s.logEntries, entry] }))
+            } catch {}
+          }
+        }
+      } catch {}
+    }
+
+    stream()
+
+    return () => {
+      active = false
+      controller.abort()
+    }
+  }, [streamExecId])
 
   const clearTimer = useCallback(() => {
     if (timerRef.current !== null) {
@@ -35,10 +87,19 @@ export function useWorkflowExecution() {
     }
   }, [])
 
-  const finish = useCallback((result: Omit<ExecutionResult, 'configRemap'> & { configRemap?: ConfigRemap[] }) => {
+  const finish = useCallback((
+    result: Omit<ExecutionResult, 'configRemap'> & { configRemap?: ConfigRemap[] },
+  ) => {
     clearTimer()
     execIdRef.current = null
-    setState({ isRunning: false, pendingDecision: null, result: { ...result, configRemap: result.configRemap ?? [] } })
+    setStreamExecId(null)
+    setState((s) => ({
+      ...s,
+      isRunning: false,
+      pendingDecision: null,
+      currentNodeId: null,
+      result: { ...result, configRemap: result.configRemap ?? [] },
+    }))
   }, [clearTimer])
 
   const scheduleNext = useCallback(() => {
@@ -73,8 +134,11 @@ export function useWorkflowExecution() {
 
     switch (data.status) {
       case 'awaiting_input':
-        // Stop polling and wait for the user; submitDecision/cancel resumes the loop.
-        setState((s) => ({ ...s, pendingDecision: data.pendingDecision ?? null }))
+        setState((s) => ({
+          ...s,
+          pendingDecision: data.pendingDecision ?? null,
+          currentNodeId: data.currentNodeId ?? null,
+        }))
         return
       case 'completed':
         finish({ success: true, failedNodes: [], warnings: data.warnings ?? [], configRemap: data.configRemap ?? [] })
@@ -91,7 +155,11 @@ export function useWorkflowExecution() {
         finish({ success: false, error: 'Workflow cancelled.', failedNodes: [], warnings: data.warnings ?? [] })
         return
       default:
-        setState((s) => (s.pendingDecision ? { ...s, pendingDecision: null } : s))
+        setState((s) => ({
+          ...s,
+          pendingDecision: null,
+          currentNodeId: data.currentNodeId ?? null,
+        }))
         scheduleNext()
     }
   }, [finish, scheduleNext])
@@ -106,7 +174,8 @@ export function useWorkflowExecution() {
     clearTimer()
     attemptRef.current = 0
     startedAtRef.current = Date.now()
-    setState({ isRunning: true, pendingDecision: null, result: null })
+    setState({ isRunning: true, pendingDecision: null, result: null, currentNodeId: null, logEntries: [] })
+    setStreamExecId(null)
 
     let res: Response
     try {
@@ -137,6 +206,7 @@ export function useWorkflowExecution() {
 
     const data = await res.json()
     execIdRef.current = data.executionId
+    setStreamExecId(data.executionId)
     timerRef.current = setTimeout(() => pollRef.current(), INITIAL_POLL_MS)
   }, [clearTimer, finish])
 
@@ -177,6 +247,8 @@ export function useWorkflowExecution() {
     isRunning: state.isRunning,
     pendingDecision: state.pendingDecision,
     result: state.result,
+    currentNodeId: state.currentNodeId,
+    logEntries: state.logEntries,
     start,
     submitDecision,
     cancel,

@@ -5,7 +5,8 @@ import { Handle, Position, useReactFlow } from '@xyflow/react'
 import type { Node, NodeProps } from '@xyflow/react'
 import type { CopyFileNode as CopyFileNodeType } from '@/lib/types/workflow'
 import { useNodeConfig } from '@/lib/contexts/NodeConfigContext'
-import { LuTrash2, LuCopy, LuCopyPlus } from 'react-icons/lu'
+import { useWorkflowRun } from '@/lib/contexts/WorkflowRunContext'
+import { LuTrash2, LuCopy, LuCopyPlus, LuLoaderCircle } from 'react-icons/lu'
 
 export interface CopyNodeData extends Record<string, unknown> {
   label: string
@@ -18,6 +19,7 @@ export type CopyRFNode = Node<CopyNodeData, 'copyFile' | 'copyFolder'>
 export function CopyNode({ id, type, data }: NodeProps<CopyRFNode>) {
   const { deleteElements } = useReactFlow()
   const { openCopyNodeConfig } = useNodeConfig()
+  const { currentNodeId } = useWorkflowRun()
 
   const handleDelete = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
@@ -29,6 +31,7 @@ export function CopyNode({ id, type, data }: NodeProps<CopyRFNode>) {
   const isFolder = type === 'copyFolder'
   const configured = (data.config?.targetPaths?.length ?? 0) > 0
   const hasError = !!data.executionError
+  const isActive = currentNodeId === id
 
   return (
     <div
@@ -42,6 +45,11 @@ export function CopyNode({ id, type, data }: NodeProps<CopyRFNode>) {
       >
         <LuTrash2 size={10} />
       </button>
+      {isActive && (
+        <div className="absolute top-1.5 right-1.5">
+          <LuLoaderCircle size={12} className="animate-spin text-white/60" />
+        </div>
+      )}
 
       <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md border border-amber-500/30 bg-amber-500/10 text-amber-400">
         {isFolder ? <LuCopy size={16} /> : <LuCopyPlus size={16} />}

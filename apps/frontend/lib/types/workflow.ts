@@ -340,6 +340,17 @@ export interface WorkflowPreview {
   failedNodes: ExecutionFailedNode[];
 }
 
+export type LogEntryKind = 'moved' | 'copied' | 'created' | 'deleted' | 'renamed' | 'skipped' | 'warning' | 'started' | 'classified' | 'unclassified';
+
+export interface LogEntry {
+  nodeId: string;
+  nodeName: string;
+  kind: LogEntryKind;
+  itemName: string;
+  message: string | null;
+  elapsed: number; // seconds since execution start
+}
+
 // A mid-run choice the engine is blocked on (e.g. a Move/Copy destination-name collision). The user
 // picks one of `options`; the choice is posted back to resume the suspended run.
 export interface PendingDecision {

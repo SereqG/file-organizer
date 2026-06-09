@@ -4,7 +4,7 @@ buckets keyed by category id for routing by the execution engine."""
 import base64
 import json
 from dataclasses import dataclass
-from typing import Optional
+from typing import Callable, Optional
 
 import filetype
 from pypdf import PdfReader
@@ -85,9 +85,14 @@ def classify_items(
     items: list[WorkflowItem],
     categories: list[Category],
     allow_duplicate: bool,
+    on_items_classified: Optional[Callable[[list[tuple[str, Optional[str]]]], None]] = None,
 ) -> tuple[Optional[str], Optional[dict[str, list[str]]]]:
     """Classify items against categories. Returns (error, result_buckets) where
-    result_buckets maps category id → list of item ids, plus an ``_unclassified`` key."""
+    result_buckets maps category id → list of item ids, plus an ``_unclassified`` key.
+
+    ``on_items_classified`` is called after each LLM batch with a list of
+    ``(item_name, category_names_or_None)`` so callers can stream progress in real time.
+    """
     _logger.info(
         "Classifier started | items=%d categories=%d allow_duplicate=%s",
         len(items), len(categories), allow_duplicate,
@@ -119,6 +124,9 @@ def classify_items(
     for item in items_without_candidates:
         _logger.debug("  Pre-filter skipped (no matching category): id=%s name=%s", item.id, item.name)
 
+    if on_items_classified and items_without_candidates:
+        on_items_classified([(item.name, None) for item in items_without_candidates])
+
     all_scores: list[ClassificationScore] = []
     client = get_client()
 
@@ -143,6 +151,10 @@ def classify_items(
 
         for score in scores:
             _logger.debug("  Score: item_id=%s category_id=%s confidence=%.3f", score.item_id, score.category_id, score.confidence)
+
+        if on_items_classified:
+            on_items_classified(_resolve_batch_results(batch, scores, relevant_cats, candidates, categories, allow_duplicate))
+
         all_scores.extend(scores)
 
     score_map: dict[tuple[str, str], float] = {}
@@ -340,6 +352,7 @@ def _classify_batch(
                     "strict": True,
                 },
             },
+            max_tokens=4096,
         )
     except Exception as exc:
         msg = str(exc)
@@ -347,7 +360,11 @@ def _classify_batch(
             return "Classification failed: token limit reached. Changes will be rolled back.", []
         return f"AI classification failed: {msg}", []
 
-    response_text = response.choices[0].message.content or ""
+    choice = response.choices[0]
+    if choice.finish_reason == "length":
+        return "Classification failed: AI response was cut off (output too long). Try fewer categories or a smaller batch.", []
+
+    response_text = choice.message.content or ""
     try:
         data = json.loads(response_text)
         scores = [
@@ -362,6 +379,40 @@ def _classify_batch(
         return f"AI returned unexpected response format: {exc}", []
 
     return None, scores
+
+
+def _resolve_batch_results(
+    batch: list[WorkflowItem],
+    scores: list[ClassificationScore],
+    relevant_cats: list[Category],
+    candidates: dict[str, set[str]],
+    all_categories: list[Category],
+    allow_duplicate: bool,
+) -> list[tuple[str, Optional[str]]]:
+    """Return ``(item_name, category_names | None)`` for each item in the batch.
+    Used by the ``on_items_classified`` callback to stream results as each LLM batch finishes."""
+    results: list[tuple[str, Optional[str]]] = []
+    for item in batch:
+        matches: list[tuple[Category, float]] = []
+        for cat in relevant_cats:
+            if cat.id not in candidates.get(item.id, set()):
+                continue
+            confidence = next(
+                (s.confidence for s in scores if s.item_id == item.id and s.category_id == cat.id),
+                0.0,
+            )
+            threshold = CONFIDENCE_THRESHOLDS.get(cat.min_confidence, 0.65)
+            if confidence >= threshold:
+                matches.append((cat, confidence))
+
+        if not matches:
+            results.append((item.name, None))
+        elif allow_duplicate:
+            results.append((item.name, ", ".join(m[0].name for m in matches)))
+        else:
+            best = max(matches, key=lambda p: (p[1], -all_categories.index(p[0])))
+            results.append((item.name, best[0].name))
+    return results
 
 
 def _build_buckets(

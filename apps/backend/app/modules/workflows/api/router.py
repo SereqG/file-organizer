@@ -1,5 +1,8 @@
+import asyncio
+import json
+
 from fastapi import APIRouter
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 from typing import Any, Optional
 
@@ -121,10 +124,22 @@ def _serialize_state(state: ExecutionState) -> dict:
     payload: dict = {
         "executionId": state.execution_id,
         "status": state.status,
+        "currentNodeId": state.current_node_id,
         "pendingDecision": state.pending_decision,
         "error": error,
         "failedNodes": [{"id": n.id, "error": n.error} for n in (result.failed_nodes if result else [])],
         "warnings": _serialize_warnings(state.context.warnings),
+        "logEntries": [
+            {
+                "nodeId": e.node_id,
+                "nodeName": e.node_name,
+                "kind": e.kind,
+                "itemName": e.item_name,
+                "message": e.message,
+                "elapsed": round(e.elapsed, 3),
+            }
+            for e in state.context.log_entries
+        ],
     }
     if state.status == "completed":
         payload["items"] = [vars(item) for item in state.context.items]
@@ -157,6 +172,42 @@ def get_execution(execution_id: str):
     if state is None:
         return JSONResponse(status_code=404, content={"error": "Execution not found."})
     return _serialize_state(state)
+
+
+def _serialize_log_entry(e) -> str:
+    return json.dumps({
+        "nodeId": e.node_id,
+        "nodeName": e.node_name,
+        "kind": e.kind,
+        "itemName": e.item_name,
+        "message": e.message,
+        "elapsed": round(e.elapsed, 3),
+    })
+
+
+@router.get("/execute/{execution_id}/logs")
+async def stream_execution_logs(execution_id: str):
+    state = execution_store.get(execution_id)
+    if state is None:
+        return JSONResponse(status_code=404, content={"error": "Execution not found."})
+
+    async def generate():
+        cursor = 0
+        while True:
+            entries = state.context.log_entries
+            if len(entries) > cursor:
+                for entry in entries[cursor:]:
+                    yield f"data: {_serialize_log_entry(entry)}\n\n"
+                cursor = len(entries)
+            if state.is_terminal() and cursor >= len(state.context.log_entries):
+                break
+            await asyncio.sleep(0.05)
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 class ResumeRequest(BaseModel):

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { ReactFlow, Background, BackgroundVariant } from '@xyflow/react'
 import type { FileTreeNode } from '@/lib/types/explore'
@@ -8,10 +8,14 @@ import type { ExecutionFailedNode } from '@/lib/types/workflow'
 import { useWorkflowEditor } from '@/hooks/useWorkflowEditor'
 import { useExploreJob } from '@/hooks/useExploreJob'
 import { NodeConfigContext } from '@/lib/contexts/NodeConfigContext'
+import { WorkflowRunContext } from '@/lib/contexts/WorkflowRunContext'
+import type { WorkflowRunState } from '@/lib/contexts/WorkflowRunContext'
 import { CategoryLibraryProvider } from '@/lib/workflow/stores/categoryLibrary'
 import { WorkspaceIndicator } from './WorkspaceIndicator'
 import { BottomControls } from './BottomControls'
 import { DepthConfirmModal } from './DepthConfirmModal'
+import { LogsPanelButton } from './LogsPanelButton'
+import { LogsPanel } from './LogsPanel'
 import { IfConfigModal } from './nodes/if_node/IfConfigModal'
 import { SwitchConfigModal } from './nodes/switch_node/SwitchConfigModal'
 import { CreateFolderConfigModal } from './nodes/create_folder_node/CreateFolderConfigModal'
@@ -32,6 +36,20 @@ interface WorkflowEditorProps {
 }
 
 export function WorkflowEditor({ workspacePath, workspaceTree, sessionId, onTreeRefresh }: WorkflowEditorProps) {
+  const [runState, setRunStateRaw] = useState<WorkflowRunState>({ isRunning: false, currentNodeId: null, logEntries: [] })
+  const [hasRun, setHasRun] = useState(false)
+  const [logsPanelOpen, setLogsPanelOpen] = useState(false)
+
+  const setRunState = useCallback((patch: Partial<WorkflowRunState>) => {
+    setRunStateRaw((s) => ({ ...s, ...patch }))
+    if (patch.isRunning) {
+      setHasRun(true)
+      setLogsPanelOpen(true)
+    }
+  }, [])
+
+  const runContextValue = { ...runState, hasRun, setRunState }
+
   const { state: exploreState, startExplore, acceptPartialTree } = useExploreJob(sessionId, { autoStart: false, rootPath: workspacePath })
 
   const isExploring = exploreState.phase === 'loading' || exploreState.phase === 'awaiting_confirmation'
@@ -101,6 +119,7 @@ export function WorkflowEditor({ workspacePath, workspaceTree, sessionId, onTree
 
   return createPortal(
     <CategoryLibraryProvider>
+    <WorkflowRunContext.Provider value={runContextValue}>
     <NodeConfigContext.Provider value={nodeConfigValue}>
       <div className="fixed inset-0">
           <WorkspaceIndicator path={workspacePath} tree={workspaceTree} />
@@ -254,8 +273,12 @@ export function WorkflowEditor({ workspacePath, workspaceTree, sessionId, onTree
               onCancel={() => acceptPartialTree(exploreState.partialTree)}
             />
           )}
+
+          <LogsPanelButton panelOpen={logsPanelOpen} onToggle={() => setLogsPanelOpen((o) => !o)} />
+          {logsPanelOpen && <LogsPanel onClose={() => setLogsPanelOpen(false)} />}
         </div>
     </NodeConfigContext.Provider>
+    </WorkflowRunContext.Provider>
     </CategoryLibraryProvider>,
     document.body
   )

@@ -5,7 +5,8 @@ import { Handle, Position, useReactFlow } from '@xyflow/react'
 import type { Node, NodeProps } from '@xyflow/react'
 import type { MoveFileNode as MoveFileNodeType } from '@/lib/types/workflow'
 import { useNodeConfig } from '@/lib/contexts/NodeConfigContext'
-import { LuTrash2, LuFolderInput, LuFileInput } from 'react-icons/lu'
+import { useWorkflowRun } from '@/lib/contexts/WorkflowRunContext'
+import { LuTrash2, LuFolderInput, LuFileInput, LuLoaderCircle } from 'react-icons/lu'
 
 export interface MoveNodeData extends Record<string, unknown> {
   label: string
@@ -19,6 +20,7 @@ export type MoveRFNode = Node<MoveNodeData, 'moveFile' | 'moveFolder'>
 export function MoveNode({ id, type, data }: NodeProps<MoveRFNode>) {
   const { deleteElements } = useReactFlow()
   const { openMoveNodeConfig } = useNodeConfig()
+  const { currentNodeId } = useWorkflowRun()
 
   const handleDelete = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
@@ -30,6 +32,7 @@ export function MoveNode({ id, type, data }: NodeProps<MoveRFNode>) {
   const isFolder = type === 'moveFolder'
   const configured = !!data.config?.targetPath
   const hasError = !!data.executionError
+  const isActive = currentNodeId === id
 
   return (
     <div
@@ -43,6 +46,11 @@ export function MoveNode({ id, type, data }: NodeProps<MoveRFNode>) {
       >
         <LuTrash2 size={10} />
       </button>
+      {isActive && (
+        <div className="absolute top-1.5 right-1.5">
+          <LuLoaderCircle size={12} className="animate-spin text-white/60" />
+        </div>
+      )}
 
       <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md border border-violet-500/30 bg-violet-500/10 text-violet-400">
         {isFolder ? <LuFolderInput size={16} /> : <LuFileInput size={16} />}

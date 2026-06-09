@@ -1,3 +1,4 @@
+import time
 from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Callable, Optional
@@ -18,6 +19,7 @@ from app.modules.workflows.application.nodes.transfer_helpers import apply_confi
 from app.modules.workflows.domain.models import (
     ExecutionContext,
     ExecutionWarning,
+    LogEntry,
     Workflow,
     WorkflowNode,
 )
@@ -151,12 +153,15 @@ def execute_workflow(workflow: Workflow, context: ExecutionContext) -> WorkflowE
         node = node_map[node_id]
         executed.append(node_id)
 
+        if context.on_node_start:
+            context.on_node_start(node_id, node.name)
+
         if node.type == IF_NODE_TYPE:
             error = _route_partitioned(node, scope, item_by_id, out_edges, incoming, partition_if, "If")
         elif node.type == SWITCH_NODE_TYPE:
             error = _route_partitioned(node, scope, item_by_id, out_edges, incoming, partition_switch, "Switch")
         elif node.type == AI_CLASSIFIER_NODE_TYPE:
-            error = _route_ai_classifier(node, scope, item_by_id, out_edges, incoming)
+            error = _route_ai_classifier(node, scope, item_by_id, out_edges, incoming, context)
         else:
             error = None
 
@@ -171,6 +176,12 @@ def execute_workflow(workflow: Workflow, context: ExecutionContext) -> WorkflowE
                     warnings=list(context.warnings),
                 )
             continue
+
+        context.log_entries.append(LogEntry(
+            node_id=node_id, node_name=node.name, kind="started",
+            item_name="", message=None,
+            elapsed=time.time() - context.start_time,
+        ))
 
         try:
             result = _dispatch(node, context, scope)
@@ -330,6 +341,7 @@ def _route_ai_classifier(
     item_by_id: dict,
     out_edges: dict[str, list[tuple[str, Optional[str]]]],
     incoming: dict[str, set[str]],
+    context: ExecutionContext,
 ) -> Optional[str]:
     """Classify scoped items via AI and route each item id to its category handle.
     Returns an error string on failure, None on success."""
@@ -357,8 +369,29 @@ def _route_ai_classifier(
         except (KeyError, TypeError):
             return "AI Classifier: one or more categories is missing required fields."
 
+    context.log_entries.append(LogEntry(
+        node_id=node.id, node_name=node.name, kind="started",
+        item_name="", message=None,
+        elapsed=time.time() - context.start_time,
+    ))
+
+    def on_items_classified(results: list[tuple[str, Optional[str]]]) -> None:
+        for item_name, category_names in results:
+            if category_names:
+                context.log_entries.append(LogEntry(
+                    node_id=node.id, node_name=node.name, kind="classified",
+                    item_name=item_name, message=f"→ {category_names}",
+                    elapsed=time.time() - context.start_time,
+                ))
+            else:
+                context.log_entries.append(LogEntry(
+                    node_id=node.id, node_name=node.name, kind="unclassified",
+                    item_name=item_name, message=None,
+                    elapsed=time.time() - context.start_time,
+                ))
+
     scoped_items = [item_by_id[item_id] for item_id in scope if item_id in item_by_id]
-    error, buckets = classify_items(scoped_items, categories, allow_duplicate)
+    error, buckets = classify_items(scoped_items, categories, allow_duplicate, on_items_classified)
 
     if error:
         return error

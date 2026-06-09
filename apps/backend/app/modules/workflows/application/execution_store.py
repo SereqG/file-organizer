@@ -37,6 +37,7 @@ class ExecutionState:
     execution_id: str
     context: ExecutionContext
     status: str = STATUS_RUNNING
+    current_node_id: Optional[str] = None
     pending_decision: Optional[dict] = None
     decision_result: Optional[dict] = None
     cancelled: bool = False
@@ -128,6 +129,7 @@ def cancel(state: ExecutionState) -> bool:
 def finish(state: ExecutionState, result: WorkflowExecutionResult) -> None:
     with state.lock:
         state.result = result
+        state.current_node_id = None
         if result.error == CANCELLED_ERROR:
             state.status = STATUS_CANCELLED
         elif result.error:
@@ -140,5 +142,6 @@ def finish(state: ExecutionState, result: WorkflowExecutionResult) -> None:
 def fail(state: ExecutionState, error: str) -> None:
     with state.lock:
         state.result = WorkflowExecutionResult(error=error)
+        state.current_node_id = None
         state.status = STATUS_FAILED
         state.updated_at = time.time()

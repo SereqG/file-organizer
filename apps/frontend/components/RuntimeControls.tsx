@@ -9,6 +9,7 @@ import { DecisionModal } from './DecisionModal'
 import type { ConfigRemap, ExecutionFailedNode, WorkflowDefinition, WorkflowNode } from '@/lib/types/workflow'
 import { useWorkflowReadiness } from '@/hooks/useWorkflowReadiness'
 import { useWorkflowExecution } from '@/hooks/useWorkflowExecution'
+import { useWorkflowRun } from '@/lib/contexts/WorkflowRunContext'
 import type { WorkflowPreview } from '@/lib/types/workflow'
 import { PREDEFINED_CATEGORIES, loadCustomCategories } from '@/lib/workflow/stores/categoryLibrary'
 
@@ -74,6 +75,7 @@ export function RuntimeControls({ definition, rootPath, onRunStart, onRunComplet
   const [preview, setPreview] = useState<WorkflowPreview | null>(null)
   const [pendingResolvedNodes, setPendingResolvedNodes] = useState<WorkflowNode[] | null>(null)
   const execution = useWorkflowExecution()
+  const { setRunState } = useWorkflowRun()
 
   function getCategoryByIdFresh(id: string) {
     const all = [...PREDEFINED_CATEGORIES, ...loadCustomCategories()]
@@ -85,6 +87,14 @@ export function RuntimeControls({ definition, rootPath, onRunStart, onRunComplet
     onRunComplete(execution.result.failedNodes)
     onConfigRemap(execution.result.configRemap)
   }, [execution.result, onRunComplete, onConfigRemap])
+
+  useEffect(() => {
+    setRunState({
+      isRunning: execution.isRunning,
+      currentNodeId: execution.currentNodeId,
+      logEntries: execution.logEntries,
+    })
+  }, [execution.isRunning, execution.currentNodeId, execution.logEntries, setRunState])
 
   async function handleRun() {
     if (!definition) return
