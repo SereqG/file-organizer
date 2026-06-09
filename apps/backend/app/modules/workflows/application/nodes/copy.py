@@ -8,6 +8,7 @@ target), no cross-filesystem restriction, produced-item registration, and an opt
 
 import shutil
 import tempfile
+import time
 import uuid
 from dataclasses import replace
 from pathlib import Path
@@ -16,7 +17,7 @@ from typing import Callable, Optional
 from app.modules.workflows.application.nodes.folder_helpers import resolve_incremental_name
 from app.modules.workflows.application.nodes.file_helpers import resolve_incremental_file_name
 from app.modules.workflows.application.nodes import transfer_helpers as helpers
-from app.modules.workflows.domain.models import ExecutionContext, ExecutionWarning, PlannedAction, WorkflowItem, WorkflowNode
+from app.modules.workflows.domain.models import ExecutionContext, ExecutionWarning, LogEntry, PlannedAction, WorkflowItem, WorkflowNode
 from app.modules.workflows.domain import warning_codes
 
 
@@ -119,6 +120,11 @@ def execute_copy(
                         ExecutionWarning(node.id, warning_codes.COLLISION_SKIPPED,
                                          f"{Path(dest).name} already exists; skipped.", item_path=root, target_path=str(dest))
                     )
+                    context.log_entries.append(LogEntry(
+                        node_id=node.id, node_name=node.name, kind="skipped",
+                        item_name=Path(root).name, message="name already exists",
+                        elapsed=time.time() - context.start_time,
+                    ))
                     continue
                 if resolution == "rename_incrementally":
                     dest = incremental(dest)
@@ -144,6 +150,11 @@ def execute_copy(
             context.actions.append(
                 PlannedAction(node.id, "copy", f"Copy {root} to {dest}", item_path=root, target_path=str(dest))
             )
+            context.log_entries.append(LogEntry(
+                node_id=node.id, node_name=node.name, kind="copied",
+                item_name=Path(root).name, message=None,
+                elapsed=time.time() - context.start_time,
+            ))
             copied.append((str(dest), [p.id for p in produced], staging_dir))
             claimed.add(str(dest))
             root_copied = True

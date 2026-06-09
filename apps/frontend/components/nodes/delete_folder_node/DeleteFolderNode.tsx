@@ -5,7 +5,8 @@ import { Handle, Position, useReactFlow } from '@xyflow/react'
 import type { Node, NodeProps } from '@xyflow/react'
 import type { DeleteFolderNode as DeleteFolderNodeType } from '@/lib/types/workflow'
 import { useNodeConfig } from '@/lib/contexts/NodeConfigContext'
-import { LuTrash2, LuFolderX } from 'react-icons/lu'
+import { useWorkflowRun } from '@/lib/contexts/WorkflowRunContext'
+import { LuTrash2, LuFolderX, LuLoaderCircle } from 'react-icons/lu'
 
 export interface DeleteFolderNodeData extends Record<string, unknown> {
   label: string
@@ -18,6 +19,7 @@ export type DeleteFolderRFNode = Node<DeleteFolderNodeData, 'deleteFolder'>
 export function DeleteFolderNode({ id, data }: NodeProps<DeleteFolderRFNode>) {
   const { deleteElements } = useReactFlow()
   const { openDeleteFolderNodeConfig } = useNodeConfig()
+  const { currentNodeId } = useWorkflowRun()
 
   const handleDelete = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
@@ -32,6 +34,7 @@ export function DeleteFolderNode({ id, data }: NodeProps<DeleteFolderRFNode>) {
   const folderCount = data.config?.folderPaths?.length ?? 0
   const configured = deleteAllEncountered || folderCount > 0
   const hasError = !!data.executionError
+  const isActive = currentNodeId === id
 
   const summary = deleteAllEncountered
     ? 'All encountered dirs'
@@ -51,6 +54,11 @@ export function DeleteFolderNode({ id, data }: NodeProps<DeleteFolderRFNode>) {
       >
         <LuTrash2 size={10} />
       </button>
+      {isActive && (
+        <div className="absolute top-1.5 right-1.5">
+          <LuLoaderCircle size={12} className="animate-spin text-white/60" />
+        </div>
+      )}
 
       <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md border border-rose-500/30 bg-rose-500/10 text-rose-400">
         <LuFolderX size={16} />

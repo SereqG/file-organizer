@@ -1,24 +1,24 @@
-import os
+import ssl
 
 import httpx
 from openai import OpenAI
 
 from app.config import settings
 
-_SYSTEM_CA_BUNDLE = "/etc/ssl/certs/ca-certificates.crt"
 
-
-def _ssl_verify() -> "str | bool":
-    # Prefer the system CA bundle so that corporate SSL inspection proxies
-    # (e.g. Fortinet) are trusted. Fall back to True (httpx default) if the
-    # bundle is absent, which works in standard environments.
-    if os.path.isfile(_SYSTEM_CA_BUNDLE):
-        return _SYSTEM_CA_BUNDLE
-    return True
+def _build_ssl_context() -> ssl.SSLContext:
+    # ssl.create_default_context() enables VERIFY_X509_STRICT which rejects
+    # CA certs that lack AKI/SKI extensions (e.g. Fortinet SSL inspection
+    # proxies). Using SSLContext(PROTOCOL_TLS_CLIENT) + load_default_certs()
+    # keeps hostname verification and full cert validation but skips that
+    # strict flag, so the corporate CA is accepted.
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ctx.load_default_certs()
+    return ctx
 
 
 def get_client() -> OpenAI:
-    http_client = httpx.Client(verify=_ssl_verify())
+    http_client = httpx.Client(verify=_build_ssl_context())
     return OpenAI(
         base_url="https://openrouter.ai/api/v1",
         api_key=settings.openrouter_api_key,

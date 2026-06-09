@@ -1,3 +1,4 @@
+import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from uuid import UUID, uuid4
@@ -87,6 +88,16 @@ class PlannedAction:
 
 
 @dataclass
+class LogEntry:
+    node_id: str
+    node_name: str
+    kind: str  # moved, copied, created, deleted, renamed, skipped, warning
+    item_name: str
+    message: str | None
+    elapsed: float  # seconds since context.start_time
+
+
+@dataclass
 class ExecutionContext:
     execution_id: UUID = field(default_factory=uuid4)
     started_at: datetime = field(default_factory=datetime.utcnow)
@@ -106,3 +117,8 @@ class ExecutionContext:
     # collision calls ``request_decision(payload) -> decision``; it blocks until the user responds
     # (or raises if the run is cancelled). ``None`` for synchronous/dry runs — nodes use defaults.
     request_decision: Optional[Callable[[dict], dict]] = None
+    # Hook called by the engine before each node starts. Used to stream the active node id to
+    # the polling endpoint. None for dry runs — no-op when absent.
+    on_node_start: Optional[Callable[[str, str], None]] = None  # (node_id, node_name)
+    start_time: float = field(default_factory=time.time)
+    log_entries: list[LogEntry] = field(default_factory=list)

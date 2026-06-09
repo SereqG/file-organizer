@@ -5,7 +5,8 @@ import { Handle, Position, useReactFlow } from '@xyflow/react'
 import type { Node, NodeProps } from '@xyflow/react'
 import type { RenameFileNode as RenameFileNodeType } from '@/lib/types/workflow'
 import { useNodeConfig } from '@/lib/contexts/NodeConfigContext'
-import { LuTrash2, LuFilePen } from 'react-icons/lu'
+import { useWorkflowRun } from '@/lib/contexts/WorkflowRunContext'
+import { LuTrash2, LuFilePen, LuLoaderCircle } from 'react-icons/lu'
 
 export interface RenameFileNodeData extends Record<string, unknown> {
   label: string
@@ -18,6 +19,7 @@ export type RenameFileRFNode = Node<RenameFileNodeData, 'renameFile'>
 export function RenameFileNode({ id, data }: NodeProps<RenameFileRFNode>) {
   const { deleteElements } = useReactFlow()
   const { openRenameFileNodeConfig } = useNodeConfig()
+  const { currentNodeId } = useWorkflowRun()
 
   const handleDelete = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
@@ -31,6 +33,7 @@ export function RenameFileNode({ id, data }: NodeProps<RenameFileRFNode>) {
   const newName = data.config?.newName
   const configured = !!(data.config?.filePath && newName)
   const hasError = !!data.executionError
+  const isActive = currentNodeId === id
 
   return (
     <div
@@ -44,6 +47,11 @@ export function RenameFileNode({ id, data }: NodeProps<RenameFileRFNode>) {
       >
         <LuTrash2 size={10} />
       </button>
+      {isActive && (
+        <div className="absolute top-1.5 right-1.5">
+          <LuLoaderCircle size={12} className="animate-spin text-white/60" />
+        </div>
+      )}
 
       <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md border border-amber-500/30 bg-amber-500/10 text-amber-400">
         <LuFilePen size={16} />

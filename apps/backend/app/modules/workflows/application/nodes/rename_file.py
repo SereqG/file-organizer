@@ -1,3 +1,4 @@
+import time
 from pathlib import Path
 from typing import Callable, Optional
 
@@ -5,7 +6,7 @@ from app.modules.workflows.application.nodes.file_helpers import (
     find_file_item_by_path,
     resolve_incremental_file_name,
 )
-from app.modules.workflows.domain.models import ExecutionContext, PlannedAction, WorkflowNode
+from app.modules.workflows.domain.models import ExecutionContext, LogEntry, PlannedAction, WorkflowNode
 
 
 def execute_rename_file(node: WorkflowNode, context: ExecutionContext, scope: set[str]) -> tuple[Optional[str], Optional[Callable], Optional[Callable]]:
@@ -43,6 +44,11 @@ def execute_rename_file(node: WorkflowNode, context: ExecutionContext, scope: se
     context.actions.append(
         PlannedAction(node.id, "rename", f"Rename file {old_path} to {target.name}", item_path=old_path, target_path=new_path)
     )
+    context.log_entries.append(LogEntry(
+        node_id=node.id, node_name=node.name, kind="renamed",
+        item_name=source.name, message=None,
+        elapsed=time.time() - context.start_time,
+    ))
 
     def undo() -> None:
         target.rename(source)

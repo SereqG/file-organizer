@@ -6,7 +6,8 @@ import type { Node, NodeProps } from '@xyflow/react'
 import { SWITCH_DEFAULT_HANDLE, type SwitchNode as SwitchNodeType } from '@/lib/types/workflow'
 import { SWITCH_DEFAULT_COLOR, switchOutputColor } from '@/lib/workflow/utils/switchColors'
 import { useNodeConfig } from '@/lib/contexts/NodeConfigContext'
-import { LuTrash2, LuSplit } from 'react-icons/lu'
+import { useWorkflowRun } from '@/lib/contexts/WorkflowRunContext'
+import { LuTrash2, LuSplit, LuLoaderCircle } from 'react-icons/lu'
 
 export interface SwitchNodeData extends Record<string, unknown> {
   label: string
@@ -40,6 +41,7 @@ function buildOutputs(config?: SwitchNodeType['config']): OutputHandle[] {
 export function SwitchNode({ id, data }: NodeProps<SwitchRFNode>) {
   const { deleteElements } = useReactFlow()
   const { openSwitchNodeConfig } = useNodeConfig()
+  const { currentNodeId } = useWorkflowRun()
 
   const handleDelete = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
@@ -54,6 +56,7 @@ export function SwitchNode({ id, data }: NodeProps<SwitchRFNode>) {
   const outputs = buildOutputs(data.config)
   const configured = cases.length > 0 && cases.every((c) => c.conditions.children.length > 0)
   const hasError = !!data.executionError
+  const isActive = currentNodeId === id
 
   return (
     <div
@@ -68,6 +71,11 @@ export function SwitchNode({ id, data }: NodeProps<SwitchRFNode>) {
       >
         <LuTrash2 size={10} />
       </button>
+      {isActive && (
+        <div className="absolute top-1.5 left-1.5">
+          <LuLoaderCircle size={12} className="animate-spin text-white/60" />
+        </div>
+      )}
 
       <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md border border-orange-500/30 bg-orange-500/10 text-orange-400">
         <LuSplit size={16} />

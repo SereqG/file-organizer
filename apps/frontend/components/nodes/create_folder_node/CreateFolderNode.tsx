@@ -5,7 +5,8 @@ import { Handle, Position, useReactFlow } from '@xyflow/react'
 import type { Node, NodeProps } from '@xyflow/react'
 import type { CreateFolderNode as CreateFolderNodeType } from '@/lib/types/workflow'
 import { useNodeConfig } from '@/lib/contexts/NodeConfigContext'
-import { LuTrash2, LuFolderPlus } from 'react-icons/lu'
+import { useWorkflowRun } from '@/lib/contexts/WorkflowRunContext'
+import { LuTrash2, LuFolderPlus, LuLoaderCircle } from 'react-icons/lu'
 
 export interface CreateFolderNodeData extends Record<string, unknown> {
   label: string
@@ -18,6 +19,7 @@ export type CreateFolderRFNode = Node<CreateFolderNodeData, 'createFolder'>
 export function CreateFolderNode({ id, data }: NodeProps<CreateFolderRFNode>) {
   const { deleteElements } = useReactFlow()
   const { openCreateFolderNodeConfig } = useNodeConfig()
+  const { currentNodeId } = useWorkflowRun()
 
   const handleDelete = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
@@ -31,6 +33,7 @@ export function CreateFolderNode({ id, data }: NodeProps<CreateFolderRFNode>) {
   const folderName = data.config?.folderName
   const configured = !!(folderName && data.config?.parentFolderPath)
   const hasError = !!data.executionError
+  const isActive = currentNodeId === id
 
   return (
     <div
@@ -44,6 +47,11 @@ export function CreateFolderNode({ id, data }: NodeProps<CreateFolderRFNode>) {
       >
         <LuTrash2 size={10} />
       </button>
+      {isActive && (
+        <div className="absolute top-1.5 right-1.5">
+          <LuLoaderCircle size={12} className="animate-spin text-white/60" />
+        </div>
+      )}
 
       <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md border border-sky-500/30 bg-sky-500/10 text-sky-400">
         <LuFolderPlus size={16} />

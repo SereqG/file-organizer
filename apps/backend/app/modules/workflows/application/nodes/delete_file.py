@@ -1,10 +1,11 @@
 import shutil
 import tempfile
+import time
 from pathlib import Path
 from typing import Callable, Optional
 
 from app.modules.workflows.application.nodes.file_helpers import find_file_item_by_path
-from app.modules.workflows.domain.models import ExecutionContext, PlannedAction, WorkflowItem, WorkflowNode
+from app.modules.workflows.domain.models import ExecutionContext, LogEntry, PlannedAction, WorkflowItem, WorkflowNode
 
 
 def _resolve_targets(node: WorkflowNode, context: ExecutionContext, scope: set[str]) -> tuple[Optional[str], list[str]]:
@@ -61,6 +62,11 @@ def execute_delete_file(node: WorkflowNode, context: ExecutionContext, scope: se
         if removed is not None:
             context.items[:] = [i for i in context.items if i is not removed]
         context.actions.append(PlannedAction(node.id, "delete", f"Delete file {target}", target_path=target))
+        context.log_entries.append(LogEntry(
+            node_id=node.id, node_name=node.name, kind="deleted",
+            item_name=Path(target).name, message=None,
+            elapsed=time.time() - context.start_time,
+        ))
 
     context.outputs[node.id] = {"deletedPaths": [target for target, _, _, _ in staged]}
 

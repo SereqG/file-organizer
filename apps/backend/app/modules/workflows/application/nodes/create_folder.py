@@ -1,5 +1,6 @@
 import os
 import shutil
+import time
 import uuid
 from pathlib import Path
 from typing import Callable, Optional
@@ -8,7 +9,7 @@ from app.modules.workflows.application.nodes.folder_helpers import (
     find_directory_item_by_path,
     resolve_incremental_name,
 )
-from app.modules.workflows.domain.models import ExecutionContext, PlannedAction, WorkflowItem, WorkflowNode
+from app.modules.workflows.domain.models import ExecutionContext, LogEntry, PlannedAction, WorkflowItem, WorkflowNode
 
 
 def _make_workflow_item(path: Path) -> WorkflowItem:
@@ -21,7 +22,7 @@ def _make_workflow_item(path: Path) -> WorkflowItem:
     )
 
 
-def _create_folder(path: Path, node_id: str, context: ExecutionContext) -> tuple[Optional[str], Optional[Callable], Optional[Callable]]:
+def _create_folder(path: Path, node: WorkflowNode, context: ExecutionContext) -> tuple[Optional[str], Optional[Callable], Optional[Callable]]:
     if not context.dry_run:
         try:
             os.makedirs(path)
@@ -30,10 +31,15 @@ def _create_folder(path: Path, node_id: str, context: ExecutionContext) -> tuple
 
     item = _make_workflow_item(path)
     context.items.append(item)
-    context.outputs[node_id] = item
+    context.outputs[node.id] = item
     context.actions.append(
-        PlannedAction(node_id=node_id, kind="create", description=f"Create folder {path}", target_path=str(path))
+        PlannedAction(node_id=node.id, kind="create", description=f"Create folder {path}", target_path=str(path))
     )
+    context.log_entries.append(LogEntry(
+        node_id=node.id, node_name=node.name, kind="created",
+        item_name=path.name, message=None,
+        elapsed=time.time() - context.start_time,
+    ))
 
     def undo():
         shutil.rmtree(path, ignore_errors=True)
@@ -56,7 +62,7 @@ def execute_create_folder(node: WorkflowNode, context: ExecutionContext, scope: 
     target_path = Path(parent_item.path) / folder_name
 
     if not target_path.exists():
-        return _create_folder(target_path, node.id, context)
+        return _create_folder(target_path, node, context)
 
     if if_exists == "reuse_existing":
         existing = next(
@@ -71,7 +77,7 @@ def execute_create_folder(node: WorkflowNode, context: ExecutionContext, scope: 
 
     if if_exists == "rename_incrementally":
         new_path = resolve_incremental_name(target_path)
-        return _create_folder(new_path, node.id, context)
+        return _create_folder(new_path, node, context)
 
     if if_exists == "overwrite":
         if not context.dry_run:
@@ -79,6 +85,6 @@ def execute_create_folder(node: WorkflowNode, context: ExecutionContext, scope: 
                 shutil.rmtree(target_path)
             except OSError:
                 return f"Failed to overwrite folder {target_path}.", None, None
-        return _create_folder(target_path, node.id, context)
+        return _create_folder(target_path, node, context)
 
     return f"Folder {target_path} already exists.", None, None
