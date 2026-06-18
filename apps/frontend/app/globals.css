@@ -32,3 +32,14 @@ body {
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
   overflow: hidden;
 }
+
+.react-flow__handle {
+  width: 10px !important;
+  height: 10px !important;
+  transition: transform 0.15s ease;
+}
+
+.react-flow__handle-left:hover { transform: translate(-50%, -50%) scale(1.5); }
+.react-flow__handle-right:hover { transform: translate(50%, -50%) scale(1.5); }
+.react-flow__handle-top:hover { transform: translate(-50%, -50%) scale(1.5); }
+.react-flow__handle-bottom:hover { transform: translate(-50%, 50%) scale(1.5); }
