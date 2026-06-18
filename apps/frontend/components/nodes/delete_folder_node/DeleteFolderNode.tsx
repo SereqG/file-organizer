@@ -6,7 +6,8 @@ import type { Node, NodeProps } from '@xyflow/react'
 import type { DeleteFolderNode as DeleteFolderNodeType } from '@/lib/types/workflow'
 import { useNodeConfig } from '@/lib/contexts/NodeConfigContext'
 import { useWorkflowRun } from '@/lib/contexts/WorkflowRunContext'
-import { LuTrash2, LuFolderX, LuLoaderCircle } from 'react-icons/lu'
+import { LuFolderX, LuLoaderCircle } from 'react-icons/lu'
+import { NodeDeleteButton } from '@/components/nodes/shared/NodeDeleteButton'
 
 export interface DeleteFolderNodeData extends Record<string, unknown> {
   label: string
@@ -47,13 +48,7 @@ export function DeleteFolderNode({ id, data }: NodeProps<DeleteFolderRFNode>) {
       onClick={handleOpen}
       className={`relative flex items-center gap-2.5 rounded-lg border bg-[#111] px-3 py-2.5 shadow-lg min-w-40 cursor-pointer transition-colors ${hasError ? 'border-red-500/70 hover:border-red-500' : 'border-rose-500/40 hover:border-rose-500/70'}`}
     >
-      <button
-        onClick={handleDelete}
-        className="absolute -top-2.5 -right-2.5 flex h-5 w-5 items-center justify-center rounded-full border border-red-500/60 bg-[#111] text-red-500/80 transition-colors hover:border-red-500 hover:bg-red-500/10 hover:text-red-400"
-        aria-label="Delete node"
-      >
-        <LuTrash2 size={10} />
-      </button>
+      <NodeDeleteButton onClick={handleDelete} />
       {isActive && (
         <div className="absolute top-1.5 right-1.5">
           <LuLoaderCircle size={12} className="animate-spin text-white/60" />
