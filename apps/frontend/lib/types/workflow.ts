@@ -11,7 +11,6 @@ export interface WorkflowInputSchema {
 
 export type WorkflowNodeType =
   | 'manual_trigger'
-  | 'schedule_trigger'
   | 'action'
   | 'if'
   | 'switch'
@@ -50,16 +49,7 @@ export interface ManualTriggerNode extends BaseTriggerNode {
   };
 }
 
-export interface ScheduleTriggerNode extends BaseTriggerNode {
-  type: 'schedule_trigger';
-  config: {
-    cron: string;
-    timezone: string;
-    enabled: boolean;
-  };
-}
-
-export type WorkflowTriggerNode = ManualTriggerNode | ScheduleTriggerNode;
+export type WorkflowTriggerNode = ManualTriggerNode;
 
 export interface BaseGeneralNode extends BaseWorkflowNode {
   category: 'general';

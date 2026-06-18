@@ -1,4 +1,4 @@
-import { LuMousePointer2, LuClock, LuGitBranch, LuSplit, LuFolderPlus, LuFolderX, LuFolderPen, LuFileX, LuFilePen, LuFolderInput, LuFileInput, LuCopy, LuCopyPlus, LuTags } from 'react-icons/lu'
+import { LuMousePointer2, LuGitBranch, LuSplit, LuFolderPlus, LuFolderX, LuFolderPen, LuFileX, LuFilePen, LuFolderInput, LuFileInput, LuCopy, LuCopyPlus, LuTags } from 'react-icons/lu'
 import type { NodeKind } from '@/lib/types/workflowNodeDescriptor'
 import type React from 'react'
 
@@ -25,13 +25,6 @@ export const NODE_CATEGORIES: NodeCategory[] = [
         triggerId: 'manual',
         label: 'Manual Trigger',
         icon: <LuMousePointer2 size={14} />,
-      },
-      {
-        kind: 'trigger',
-        nodeType: 'trigger',
-        triggerId: 'schedule',
-        label: 'Schedule',
-        icon: <LuClock size={14} />,
       },
     ],
   },

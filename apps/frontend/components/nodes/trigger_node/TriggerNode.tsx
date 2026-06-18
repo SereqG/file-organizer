@@ -3,7 +3,7 @@
 import { useCallback } from 'react'
 import { Handle, Position, useReactFlow } from '@xyflow/react'
 import type { Node, NodeProps } from '@xyflow/react'
-import { LuTrash2, LuMousePointer2, LuClock } from 'react-icons/lu'
+import { LuTrash2, LuMousePointer2 } from 'react-icons/lu'
 
 export interface TriggerNodeData extends Record<string, unknown> {
   label: string
@@ -11,11 +11,6 @@ export interface TriggerNodeData extends Record<string, unknown> {
 }
 
 export type TriggerRFNode = Node<TriggerNodeData, 'trigger'>
-
-const TRIGGER_ICONS: Record<string, React.ReactNode> = {
-  manual: <LuMousePointer2 size={16} />,
-  schedule: <LuClock size={16} />,
-}
 
 export function TriggerNode({ id, data }: NodeProps<TriggerRFNode>) {
   const { deleteElements } = useReactFlow()
@@ -35,7 +30,7 @@ export function TriggerNode({ id, data }: NodeProps<TriggerRFNode>) {
       </button>
 
       <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md border border-orange-500/30 bg-orange-500/10 text-orange-400">
-        {TRIGGER_ICONS[data.triggerId]}
+        <LuMousePointer2 size={16} />
       </span>
       <div>
         <div className="text-[10px] uppercase tracking-wider text-orange-500/70 font-medium">Trigger</div>
