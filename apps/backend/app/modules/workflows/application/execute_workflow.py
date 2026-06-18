@@ -1,3 +1,4 @@
+import copy
 import time
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -110,7 +111,12 @@ def _reconcile_lookup(
                 item_by_id[item.id] = item
 
 
-def execute_workflow(workflow: Workflow, context: ExecutionContext) -> WorkflowExecutionResult:
+def execute_workflow(
+    workflow: Workflow,
+    context: ExecutionContext,
+    *,
+    stop_before: Optional[str] = None,
+) -> WorkflowExecutionResult:
     edge_error = _validate_edges(workflow)
     if edge_error:
         return WorkflowExecutionResult(error=edge_error)
@@ -146,6 +152,14 @@ def execute_workflow(workflow: Workflow, context: ExecutionContext) -> WorkflowE
             undo()
 
     for index, node_id in enumerate(order):
+        if stop_before is not None and node_id == stop_before:
+            # Capture the tree state on entry to this node (after all topologically-earlier nodes
+            # ran) and the scope arriving here, then halt without dispatching it or anything
+            # downstream. Deep copy because nodes mutate items in place.
+            context.snapshot_items = copy.deepcopy(context.items)
+            context.snapshot_scope_ids = set(incoming.get(node_id, set()))
+            break
+
         scope = incoming.get(node_id, set())
         if not scope:
             continue  # Reached only through empty/unconnected branches — skip the subtree.

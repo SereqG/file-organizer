@@ -11,6 +11,7 @@ import { ActionButtons } from '@/components/nodes/create_folder_node/ActionButto
 import { ErrorBoundary } from '@/components/shared/ErrorBoundary'
 import { ConfigErrorPanel } from '@/components/shared/ConfigErrorPanel'
 import { Modal } from '@/components/shared/Modal'
+import { NodeSimulationBar } from '@/components/nodes/shared/NodeSimulationBar'
 
 
 interface RenameFileConfigModalProps {
@@ -70,13 +71,16 @@ export function RenameFileConfigModal({ nodeId, workspaceTree, onClose, onSave }
             />
           </div>
 
-          <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-white/10">
-            <ValidationMessages errorCount={errorCount} />
-            <ActionButtons
-              onCancel={onClose}
-              onSave={handleSave}
-              saveDisabled={!validation.valid}
-            />
+          <div className="flex items-center justify-between px-4 py-3 border-t border-white/10">
+            <NodeSimulationBar />
+            <div className="flex items-center gap-2">
+              <ValidationMessages errorCount={errorCount} />
+              <ActionButtons
+                onCancel={onClose}
+                onSave={handleSave}
+                saveDisabled={!validation.valid}
+              />
+            </div>
           </div>
         </ErrorBoundary>
       </div>

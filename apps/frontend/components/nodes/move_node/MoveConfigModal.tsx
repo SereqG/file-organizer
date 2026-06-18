@@ -10,6 +10,7 @@ import { TransferIfExistsField } from './TransferIfExistsField'
 import { ErrorBoundary } from '@/components/shared/ErrorBoundary'
 import { ConfigErrorPanel } from '@/components/shared/ConfigErrorPanel'
 import { Modal } from '@/components/shared/Modal'
+import { NodeSimulationBar } from '@/components/nodes/shared/NodeSimulationBar'
 
 interface MoveConfigModalProps {
   nodeId: string
@@ -68,9 +69,12 @@ export function MoveConfigModal({ nodeId, workspaceTree, onClose, onSave }: Move
             <TransferIfExistsField value={ifExists} onChange={setIfExists} />
           </div>
 
-          <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-white/10">
-            <ValidationMessages errorCount={errorCount} />
-            <ActionButtons onCancel={onClose} onSave={handleSave} saveDisabled={!validation.valid} />
+          <div className="flex items-center justify-between px-4 py-3 border-t border-white/10">
+            <NodeSimulationBar />
+            <div className="flex items-center gap-2">
+              <ValidationMessages errorCount={errorCount} />
+              <ActionButtons onCancel={onClose} onSave={handleSave} saveDisabled={!validation.valid} />
+            </div>
           </div>
         </ErrorBoundary>
       </div>

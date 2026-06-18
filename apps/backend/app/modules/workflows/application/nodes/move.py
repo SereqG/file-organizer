@@ -14,6 +14,7 @@ from typing import Callable, Optional
 from app.modules.workflows.application.nodes.folder_helpers import resolve_incremental_name
 from app.modules.workflows.application.nodes.file_helpers import resolve_incremental_file_name
 from app.modules.workflows.application.nodes import transfer_helpers as helpers
+from app.modules.workflows.application.nodes.tree_lookup import path_exists
 from app.modules.workflows.domain.models import ExecutionContext, ExecutionWarning, LogEntry, PlannedAction, WorkflowNode
 from app.modules.workflows.domain import warning_codes
 
@@ -69,7 +70,7 @@ def execute_move(
         claimed = {entry[1] for entry in moved}
         staging_dir: Optional[str] = None
 
-        if str(dest) in claimed or dest.exists():
+        if str(dest) in claimed or path_exists(context, str(dest)):
             resolution = helpers.resolve_collision(context, node, root, str(dest), if_exists)
             if resolution == "fail":
                 reverse()

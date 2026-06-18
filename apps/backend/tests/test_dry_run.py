@@ -87,15 +87,97 @@ def test_dry_run_rename_keeps_disk(tmp_path):
 
 
 def test_dry_run_predicts_a_failure_without_raising(tmp_path):
-    (tmp_path / "new").mkdir()  # the folder the node would try to create already exists
+    # The folder the node would create already exists in the (scanned) virtual tree. Under dry-run,
+    # existence is read from the tree — never the disk — so the collision is predicted faithfully.
     parent = dir_item("p", tmp_path)
-    ctx = dry_context(parent)
+    existing = dir_item("existing", tmp_path / "new")
+    ctx = dry_context(parent, existing)
     n = node("cf", "createFolder", {"folderName": "new", "parentFolderPath": str(tmp_path), "ifExists": "fail"})
 
     result = execute_workflow(workflow([n], [edge("trigger-1", "cf")]), ctx)
 
     assert result.error is not None and "already exists" in result.error
     assert [n.id for n in result.failed_nodes] == ["cf"]
+
+
+def test_dry_run_chained_create_detects_virtual_collision(tmp_path):
+    # Create "tmp" twice with ifExists=fail. Nothing is on disk, so the second create can only see
+    # the first folder via the virtual tree — and must predict the "already exists" failure.
+    parent = dir_item("p", tmp_path)
+    ctx = dry_context(parent)
+    create1 = node("cf1", "createFolder", {"folderName": "tmp", "parentFolderPath": str(tmp_path), "ifExists": "fail"})
+    create2 = node("cf2", "createFolder", {"folderName": "tmp", "parentFolderPath": str(tmp_path), "ifExists": "fail"})
+
+    result = execute_workflow(
+        workflow([create1, create2], [edge("trigger-1", "cf1"), edge("cf1", "cf2")]),
+        ctx,
+    )
+
+    assert result.error is not None and "already exists" in result.error
+    assert [n.id for n in result.failed_nodes] == ["cf2"]
+    assert not (tmp_path / "tmp").exists()  # purely virtual
+
+
+def test_dry_run_move_into_virtually_created_folder(tmp_path):
+    # Create folder "dest", then move a file into it. The destination only exists virtually; the
+    # predicted tree must nest the moved file under the created folder.
+    source = tmp_path / "a.txt"
+    source.write_text("x")
+    parent = dir_item("p", tmp_path)
+    f = file_item("a", source)
+    ctx = dry_context(parent, f)
+    create = node("cf", "createFolder", {"folderName": "dest", "parentFolderPath": str(tmp_path), "ifExists": "fail"})
+    move = node("mv", "moveFile", {"targetPath": str(tmp_path / "dest"), "ifExists": "fail"})
+
+    result = execute_workflow(
+        workflow([create, move], [edge("trigger-1", "cf"), edge("cf", "mv")]),
+        ctx,
+    )
+
+    assert result.error is None
+    assert not (tmp_path / "dest").exists()  # nothing on disk
+    moved = next(i for i in ctx.items if i.id == "a")
+    assert moved.path == str(tmp_path / "dest" / "a.txt")
+    assert moved.parent_path == str(tmp_path / "dest")
+
+
+def test_stop_before_snapshots_tree_on_entry_to_node(tmp_path):
+    # Create a folder, then stop before the delete node: the snapshot shows the tree after the create
+    # ran (folder present) but before the delete, and captures the scope arriving at the delete node.
+    parent = dir_item("p", tmp_path)
+    ctx = dry_context(parent)
+    create = node("cf", "createFolder", {"folderName": "tmp", "parentFolderPath": str(tmp_path), "ifExists": "fail"})
+    delete = node("df", "deleteFolder", {"deleteAllEncountered": True, "folderPaths": []})
+
+    result = execute_workflow(
+        workflow([create, delete], [edge("trigger-1", "cf"), edge("cf", "df")]),
+        ctx,
+        stop_before="df",
+    )
+
+    assert result.error is None
+    assert ctx.snapshot_items is not None
+    snapshot_paths = {i.path for i in ctx.snapshot_items}
+    assert str(tmp_path / "tmp") in snapshot_paths  # create already applied
+    assert [a.kind for a in ctx.actions] == ["create"]  # delete never dispatched
+    # The created folder flows into the delete node's scope.
+    created = next(i for i in ctx.snapshot_items if i.path == str(tmp_path / "tmp"))
+    assert created.id in ctx.snapshot_scope_ids
+
+
+def test_stop_before_deep_copies_snapshot(tmp_path):
+    # The snapshot must be a deep copy: a later in-place mutation (rename) must not change it.
+    source = tmp_path / "a.txt"
+    source.write_text("x")
+    item = file_item("a", source)
+    parent = dir_item("p", tmp_path)
+    ctx = dry_context(parent, item)
+    rename = node("rf", "renameFile", {"filePath": str(source), "newName": "b", "ifExists": "fail"})
+
+    execute_workflow(workflow([rename], [edge("trigger-1", "rf")]), ctx, stop_before="rf")
+
+    snap = next(i for i in ctx.snapshot_items if i.id == "a")
+    assert snap.path == str(source)  # captured before the rename mutated the live item
 
 
 def test_dry_run_chains_predicted_tree_across_nodes(tmp_path):

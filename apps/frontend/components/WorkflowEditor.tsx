@@ -1,13 +1,16 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { ReactFlow, Background, BackgroundVariant } from '@xyflow/react'
 import type { FileTreeNode } from '@/lib/types/explore'
 import type { ExecutionFailedNode } from '@/lib/types/workflow'
 import { useWorkflowEditor } from '@/hooks/useWorkflowEditor'
 import { useExploreJob } from '@/hooks/useExploreJob'
+import { useWorkflowSimulation } from '@/hooks/useWorkflowSimulation'
+import type { NodeSimulationResult } from '@/lib/types/workflow'
 import { NodeConfigContext } from '@/lib/contexts/NodeConfigContext'
+import { SimulationContext } from '@/lib/contexts/SimulationContext'
 import { WorkflowRunContext } from '@/lib/contexts/WorkflowRunContext'
 import type { WorkflowRunState } from '@/lib/contexts/WorkflowRunContext'
 import { CategoryLibraryProvider } from '@/lib/workflow/stores/categoryLibrary'
@@ -115,12 +118,57 @@ export function WorkflowEditor({ workspacePath, workspaceTree, sessionId, onTree
     startExplore(false)
   }, [markFailedNodes, startExplore])
 
+  // Per-node predicted tree for the path-picker config modals. When a path-consuming modal is open,
+  // simulate the workflow up to that node so its pickers preview upstream creates/moves/deletes.
+  const { simulateNode, simulateNodeForced } = useWorkflowSimulation(definition, workspacePath)
+  const editingPathNodeId =
+    editingCreateFolderNodeId ?? editingDeleteFolderNodeId ?? editingRenameFolderNodeId ??
+    editingDeleteFileNodeId ?? editingRenameFileNodeId ?? editingMoveNodeId ?? editingCopyNodeId ?? null
+  const [simLoading, setSimLoading] = useState(false)
+  const [simResult, setSimResult] = useState<NodeSimulationResult | null>(null)
+
+  useEffect(() => {
+    if (!editingPathNodeId) return
+    let active = true
+    const run = async () => {
+      setSimLoading(true)
+      setSimResult(null)
+      const result = await simulateNode(editingPathNodeId)
+      if (active) {
+        setSimResult(result)
+        setSimLoading(false)
+      }
+    }
+    void run()
+    return () => { active = false }
+  }, [editingPathNodeId, simulateNode])
+
+  const onResimulate = useCallback(async () => {
+    if (!editingPathNodeId) return
+    setSimLoading(true)
+    setSimResult(null)
+    const result = await simulateNodeForced(editingPathNodeId)
+    setSimResult(result)
+    setSimLoading(false)
+  }, [editingPathNodeId, simulateNodeForced])
+
+  const simContextValue = useMemo(
+    () => ({ simLoading, onResimulate }),
+    [simLoading, onResimulate],
+  )
+
+  // Use the predicted tree when the node was reachable and produced one; otherwise fall back to the
+  // real scan (and surface a banner so the user knows why).
+  const treeForModal = simResult?.ok && simResult.tree ? simResult.tree : workspaceTree
+  const showFallbackBanner = !!editingPathNodeId && !simLoading && !(simResult?.ok && simResult.tree)
+
   if (!mounted) return null
 
   return createPortal(
     <CategoryLibraryProvider>
     <WorkflowRunContext.Provider value={runContextValue}>
     <NodeConfigContext.Provider value={nodeConfigValue}>
+    <SimulationContext.Provider value={simContextValue}>
       <div className="fixed inset-0">
           <WorkspaceIndicator path={workspacePath} tree={workspaceTree} />
           <ReactFlow
@@ -182,7 +230,7 @@ export function WorkflowEditor({ workspacePath, workspaceTree, sessionId, onTree
             {editingCreateFolderNodeId && (
               <CreateFolderConfigModal
                 nodeId={editingCreateFolderNodeId}
-                workspaceTree={workspaceTree}
+                workspaceTree={treeForModal}
                 onClose={closeCreateFolderConfig}
                 onSave={handleCreateFolderConfigSave}
               />
@@ -190,7 +238,7 @@ export function WorkflowEditor({ workspacePath, workspaceTree, sessionId, onTree
             {editingDeleteFolderNodeId && (
               <DeleteFolderConfigModal
                 nodeId={editingDeleteFolderNodeId}
-                workspaceTree={workspaceTree}
+                workspaceTree={treeForModal}
                 onClose={closeDeleteFolderConfig}
                 onSave={handleDeleteFolderConfigSave}
               />
@@ -198,7 +246,7 @@ export function WorkflowEditor({ workspacePath, workspaceTree, sessionId, onTree
             {editingRenameFolderNodeId && (
               <RenameFolderConfigModal
                 nodeId={editingRenameFolderNodeId}
-                workspaceTree={workspaceTree}
+                workspaceTree={treeForModal}
                 onClose={closeRenameFolderConfig}
                 onSave={handleRenameFolderConfigSave}
               />
@@ -206,7 +254,7 @@ export function WorkflowEditor({ workspacePath, workspaceTree, sessionId, onTree
             {editingDeleteFileNodeId && (
               <DeleteFileConfigModal
                 nodeId={editingDeleteFileNodeId}
-                workspaceTree={workspaceTree}
+                workspaceTree={treeForModal}
                 onClose={closeDeleteFileConfig}
                 onSave={handleDeleteFileConfigSave}
               />
@@ -214,7 +262,7 @@ export function WorkflowEditor({ workspacePath, workspaceTree, sessionId, onTree
             {editingRenameFileNodeId && (
               <RenameFileConfigModal
                 nodeId={editingRenameFileNodeId}
-                workspaceTree={workspaceTree}
+                workspaceTree={treeForModal}
                 onClose={closeRenameFileConfig}
                 onSave={handleRenameFileConfigSave}
               />
@@ -222,7 +270,7 @@ export function WorkflowEditor({ workspacePath, workspaceTree, sessionId, onTree
             {editingMoveNodeId && (
               <MoveConfigModal
                 nodeId={editingMoveNodeId}
-                workspaceTree={workspaceTree}
+                workspaceTree={treeForModal}
                 onClose={closeMoveConfig}
                 onSave={handleMoveConfigSave}
               />
@@ -230,7 +278,7 @@ export function WorkflowEditor({ workspacePath, workspaceTree, sessionId, onTree
             {editingCopyNodeId && (
               <CopyConfigModal
                 nodeId={editingCopyNodeId}
-                workspaceTree={workspaceTree}
+                workspaceTree={treeForModal}
                 onClose={closeCopyConfig}
                 onSave={handleCopyConfigSave}
               />
@@ -274,9 +322,23 @@ export function WorkflowEditor({ workspacePath, workspaceTree, sessionId, onTree
             />
           )}
 
+          {editingPathNodeId && simLoading && (
+            <div className="fixed left-1/2 top-4 z-[60] -translate-x-1/2 rounded-lg border border-white/10 bg-black/85 px-4 py-2 text-xs text-white/70 shadow-xl flex items-center gap-2">
+              <span className="size-3 rounded-full border-2 border-white/10 border-t-orange-400/70 animate-spin" />
+              Simulating upstream changes…
+            </div>
+          )}
+          {showFallbackBanner && (
+            <div className="fixed left-1/2 top-4 z-[60] -translate-x-1/2 max-w-md rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs text-amber-200/90 shadow-xl">
+              Showing the current filesystem. Connect and configure this node&apos;s upstream chain to preview their changes here.
+              {simResult?.error && <span className="block text-amber-200/60 mt-0.5">{simResult.error}</span>}
+            </div>
+          )}
+
           <LogsPanelButton panelOpen={logsPanelOpen} onToggle={() => setLogsPanelOpen((o) => !o)} />
           {logsPanelOpen && <LogsPanel onClose={() => setLogsPanelOpen(false)} />}
         </div>
+    </SimulationContext.Provider>
     </NodeConfigContext.Provider>
     </WorkflowRunContext.Provider>
     </CategoryLibraryProvider>,
