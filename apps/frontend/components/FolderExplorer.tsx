@@ -11,9 +11,10 @@ const SLOW_SCAN_THRESHOLD_S = 8
 interface Props {
   sessionId: string
   onNextStep: (path: string, tree: FileTreeNode, sessionId: string) => void
+  onBack?: () => void
 }
 
-export function FolderExplorer({ sessionId, onNextStep }: Props) {
+export function FolderExplorer({ sessionId, onNextStep, onBack }: Props) {
   const { state, elapsedSeconds, startExplore, acceptPartialTree, cancelScan } = useExploreJob(sessionId)
 
   if (state.phase === 'idle' || state.phase === 'loading') {
@@ -66,17 +67,32 @@ export function FolderExplorer({ sessionId, onNextStep }: Props) {
     <div className="mt-8">
       <p className="mb-3 text-xs text-white/30 font-mono">{state.tree.path}</p>
       <FileTree root={state.tree} />
-      <button
-        onClick={() => onNextStep(state.tree.path, state.tree, sessionId)}
-        className="
-          mt-5 w-full rounded-xl px-5 py-3.5 text-sm font-medium
-          bg-orange-500/10 border border-orange-500/20 text-orange-400
-          hover:bg-orange-500/20 hover:border-orange-500/30
-          transition-colors duration-150 cursor-pointer
-        "
-      >
-        Next step
-      </button>
+      <div className="mt-5 flex gap-3">
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="
+              rounded-xl border border-white/10 bg-white/[0.04] px-5 py-3
+              text-sm font-medium text-white/40
+              hover:border-white/20 hover:bg-white/[0.07] hover:text-white/60
+              transition-colors duration-150 cursor-pointer
+            "
+          >
+            Back
+          </button>
+        )}
+        <button
+          onClick={() => onNextStep(state.tree.path, state.tree, sessionId)}
+          className="
+            flex-1 rounded-xl px-5 py-3.5 text-sm font-medium
+            bg-orange-500/10 border border-orange-500/20 text-orange-400
+            hover:bg-orange-500/20 hover:border-orange-500/30
+            transition-colors duration-150 cursor-pointer
+          "
+        >
+          Next step
+        </button>
+      </div>
     </div>
   )
 }
