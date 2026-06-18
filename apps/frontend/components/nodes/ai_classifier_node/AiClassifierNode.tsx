@@ -9,7 +9,8 @@ import { aiClassifierOutputColor, AI_CLASSIFIER_UNCLASSIFIED_COLOR } from '@/lib
 import { useCategoryLibrary } from '@/lib/workflow/stores/categoryLibrary'
 import { useNodeConfig } from '@/lib/contexts/NodeConfigContext'
 import { useWorkflowRun } from '@/lib/contexts/WorkflowRunContext'
-import { LuTrash2, LuTags, LuLoaderCircle } from 'react-icons/lu'
+import { LuTags, LuLoaderCircle } from 'react-icons/lu'
+import { NodeDeleteButton } from '@/components/nodes/shared/NodeDeleteButton'
 
 export interface AiClassifierNodeData extends Record<string, unknown> {
   label: string
@@ -103,14 +104,7 @@ export function AiClassifierNode({ id, data }: NodeProps<AiClassifierRFNode>) {
           </div>
         )}
 
-        <button
-          onClick={handleDelete}
-          className="absolute -top-2.5 -right-2.5 flex h-5 w-5 items-center justify-center rounded-full border border-red-500/60 bg-[#111] text-red-500/80 transition-colors hover:border-red-500 hover:bg-red-500/10 hover:text-red-400"
-          aria-label="Delete node"
-          style={{ top: -10, right: -10 }}
-        >
-          <LuTrash2 size={10} />
-        </button>
+        <NodeDeleteButton onClick={handleDelete} />
 
         <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-purple-500/30 text-purple-300">
           <LuTags size={16} />

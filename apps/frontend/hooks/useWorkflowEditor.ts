@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNodesState, useEdgesState, addEdge } from '@xyflow/react'
 import type { Edge, Connection } from '@xyflow/react'
-import type { TriggerId } from '@/components/TriggerSelectModal'
 import type { AiClassifierNode as AiClassifierNodeType, ConfigRemap, CopyFileNode as CopyNodeConfigType, CreateFolderNode as CreateFolderNodeType, DeleteFileNode as DeleteFileNodeType, DeleteFolderNode as DeleteFolderNodeType, ExecutionFailedNode, IfNode as IfNodeType, MoveFileNode as MoveNodeConfigType, RenameFileNode as RenameFileNodeType, RenameFolderNode as RenameFolderNodeType, SwitchNode as SwitchNodeType } from '@/lib/types/workflow'
 import { AI_CLASSIFIER_UNCLASSIFIED_HANDLE, SWITCH_DEFAULT_HANDLE } from '@/lib/types/workflow'
 import { SWITCH_DEFAULT_COLOR, switchOutputColor } from '@/lib/workflow/utils/switchColors'
@@ -95,8 +94,8 @@ export function useWorkflowEditor() {
     removeWorkflowEdge,
   } = useWorkflowDefinition()
 
-  const handleTriggerAdded = useCallback((triggerId: TriggerId, rfNodeId: string) => {
-    addTrigger(triggerId, rfNodeId)
+  const handleTriggerAdded = useCallback((rfNodeId: string) => {
+    addTrigger(rfNodeId)
   }, [addTrigger])
 
   const handleGeneralNodeAdded = useCallback((id: string, nodeType: string, label: string) => {

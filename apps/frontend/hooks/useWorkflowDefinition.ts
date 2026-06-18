@@ -3,30 +3,18 @@
 import { useState, useCallback } from 'react'
 import type { Connection } from '@xyflow/react'
 import type { AiClassifierNode, ConfigRemap, CopyFileNode, CopyFolderNode, CreateFolderNode, DeleteFileNode, DeleteFolderNode, IfNode, MoveFileNode, MoveFolderNode, RenameFileNode, RenameFolderNode, SwitchCase, SwitchNode, WorkflowDefinition, WorkflowEdge, WorkflowTriggerNode } from '@/lib/types/workflow'
-import type { TriggerId } from '@/components/TriggerSelectModal'
 import { remapNodeConfig } from '@/lib/workflow/utils/applyConfigRemap'
 
 const WORKFLOW_VERSION = '1.0'
 
-function buildTriggerNode(triggerId: TriggerId, id: string): WorkflowTriggerNode {
-  if (triggerId === 'manual') {
-    return {
-      id,
-      type: 'manual_trigger',
-      category: 'trigger',
-      name: 'Manual Trigger',
-      version: 1,
-      config: {},
-    }
-  }
-
+function buildTriggerNode(id: string): WorkflowTriggerNode {
   return {
     id,
-    type: 'schedule_trigger',
+    type: 'manual_trigger',
     category: 'trigger',
-    name: 'Schedule',
+    name: 'Manual Trigger',
     version: 1,
-    config: { cron: '', timezone: 'UTC', enabled: false },
+    config: {},
   }
 }
 
@@ -207,8 +195,8 @@ export function useWorkflowDefinition() {
     [],
   )
 
-  const addTrigger = useCallback((triggerId: TriggerId, rfNodeId: string) => {
-    const trigger = buildTriggerNode(triggerId, rfNodeId)
+  const addTrigger = useCallback((rfNodeId: string) => {
+    const trigger = buildTriggerNode(rfNodeId)
     setDefinition({ version: WORKFLOW_VERSION, trigger, nodes: [], edges: [] })
   }, [])
 

@@ -3,7 +3,8 @@
 import { useCallback } from 'react'
 import { Handle, Position, useReactFlow } from '@xyflow/react'
 import type { Node, NodeProps } from '@xyflow/react'
-import { LuTrash2, LuMousePointer2, LuClock } from 'react-icons/lu'
+import { LuMousePointer2 } from 'react-icons/lu'
+import { NodeDeleteButton } from '@/components/nodes/shared/NodeDeleteButton'
 
 export interface TriggerNodeData extends Record<string, unknown> {
   label: string
@@ -12,30 +13,20 @@ export interface TriggerNodeData extends Record<string, unknown> {
 
 export type TriggerRFNode = Node<TriggerNodeData, 'trigger'>
 
-const TRIGGER_ICONS: Record<string, React.ReactNode> = {
-  manual: <LuMousePointer2 size={16} />,
-  schedule: <LuClock size={16} />,
-}
-
 export function TriggerNode({ id, data }: NodeProps<TriggerRFNode>) {
   const { deleteElements } = useReactFlow()
 
-  const handleDelete = useCallback(() => {
+  const handleDelete = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
     deleteElements({ nodes: [{ id }] })
   }, [id, deleteElements])
 
   return (
     <div className="relative flex items-center gap-2.5 rounded-lg border border-orange-500/40 bg-[#111] px-3 py-2.5 shadow-lg min-w-36">
-      <button
-        onClick={handleDelete}
-        className="absolute -top-2.5 -right-2.5 flex h-5 w-5 items-center justify-center rounded-full border border-red-500/60 bg-[#111] text-red-500/80 transition-colors hover:border-red-500 hover:bg-red-500/10 hover:text-red-400"
-        aria-label="Delete node"
-      >
-        <LuTrash2 size={10} />
-      </button>
+      <NodeDeleteButton onClick={handleDelete} />
 
       <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md border border-orange-500/30 bg-orange-500/10 text-orange-400">
-        {TRIGGER_ICONS[data.triggerId]}
+        <LuMousePointer2 size={16} />
       </span>
       <div>
         <div className="text-[10px] uppercase tracking-wider text-orange-500/70 font-medium">Trigger</div>

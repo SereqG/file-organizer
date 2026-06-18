@@ -7,7 +7,8 @@ import { SWITCH_DEFAULT_HANDLE, type SwitchNode as SwitchNodeType } from '@/lib/
 import { SWITCH_DEFAULT_COLOR, switchOutputColor } from '@/lib/workflow/utils/switchColors'
 import { useNodeConfig } from '@/lib/contexts/NodeConfigContext'
 import { useWorkflowRun } from '@/lib/contexts/WorkflowRunContext'
-import { LuTrash2, LuSplit, LuLoaderCircle } from 'react-icons/lu'
+import { LuSplit, LuLoaderCircle } from 'react-icons/lu'
+import { NodeDeleteButton } from '@/components/nodes/shared/NodeDeleteButton'
 
 export interface SwitchNodeData extends Record<string, unknown> {
   label: string
@@ -64,13 +65,7 @@ export function SwitchNode({ id, data }: NodeProps<SwitchRFNode>) {
       style={{ minHeight: HEADER_HEIGHT + outputs.length * OUTPUT_SLOT }}
       className={`relative flex items-center gap-2.5 rounded-lg border bg-[#111] px-3 py-2.5 pr-8 shadow-lg min-w-44 cursor-pointer transition-colors ${hasError ? 'border-red-500/70 hover:border-red-500' : 'border-orange-500/40 hover:border-orange-500/70'}`}
     >
-      <button
-        onClick={handleDelete}
-        className="absolute -top-2.5 -right-2.5 flex h-5 w-5 items-center justify-center rounded-full border border-red-500/60 bg-[#111] text-red-500/80 transition-colors hover:border-red-500 hover:bg-red-500/10 hover:text-red-400"
-        aria-label="Delete node"
-      >
-        <LuTrash2 size={10} />
-      </button>
+      <NodeDeleteButton onClick={handleDelete} />
       {isActive && (
         <div className="absolute top-1.5 left-1.5">
           <LuLoaderCircle size={12} className="animate-spin text-white/60" />

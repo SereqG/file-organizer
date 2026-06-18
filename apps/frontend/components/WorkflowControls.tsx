@@ -1,21 +1,14 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import type { OnNodesChange } from '@xyflow/react'
 import type { AppNode } from '@/hooks/useWorkflowEditor'
 import { NodesSidebar } from './nodes/nodes_sidebar/NodesSidebar'
 import { AddTriggerButton } from './AddTriggerButton'
-import { TriggerSelectModal } from './TriggerSelectModal'
-import type { TriggerId } from './TriggerSelectModal'
 import type { NodeDescriptor } from '@/lib/types/workflowNodeDescriptor'
 import { decodeDragPayload, NODE_DRAG_TYPE } from './nodes/nodes_sidebar/dragPayload'
 import { initialSwitchCases } from '@/hooks/useWorkflowDefinition'
-
-const TRIGGER_LABELS: Record<TriggerId, string> = {
-  manual: 'Manual Trigger',
-  schedule: 'Schedule',
-}
 
 function buildGeneralNode(id: string, entry: NodeDescriptor, position: { x: number; y: number }): AppNode | null {
   switch (entry.nodeType) {
@@ -51,14 +44,13 @@ function buildGeneralNode(id: string, entry: NodeDescriptor, position: { x: numb
 interface WorkflowControlsProps {
   hasTrigger: boolean
   onNodesChange: OnNodesChange<AppNode>
-  onTriggerAdded: (triggerId: TriggerId, rfNodeId: string) => void
+  onTriggerAdded: (rfNodeId: string) => void
   onGeneralNodeAdded: (id: string, nodeType: string, label: string) => void
   dropHandlerRef: React.MutableRefObject<((e: React.DragEvent<HTMLDivElement>) => void) | null>
 }
 
 export function WorkflowControls({ hasTrigger, onNodesChange, onTriggerAdded, onGeneralNodeAdded, dropHandlerRef }: WorkflowControlsProps) {
   const { screenToFlowPosition } = useReactFlow()
-  const [modalOpen, setModalOpen] = useState(false)
 
   const addNode = useCallback((entry: NodeDescriptor, clientPos?: { x: number; y: number }) => {
     const screenPos = clientPos ?? { x: window.innerWidth / 2, y: window.innerHeight / 2 }
@@ -66,15 +58,14 @@ export function WorkflowControls({ hasTrigger, onNodesChange, onTriggerAdded, on
 
     if (entry.kind === 'trigger') {
       if (hasTrigger) return
-      const triggerId = entry.triggerId as TriggerId
       const newNode: AppNode = {
         id: `trigger-${Date.now()}`,
         type: 'trigger',
         position,
-        data: { label: entry.label, triggerId },
+        data: { label: entry.label, triggerId: 'manual' },
       }
       onNodesChange([{ type: 'add', item: newNode }])
-      onTriggerAdded(triggerId, newNode.id)
+      onTriggerAdded(newNode.id)
       return
     }
 
@@ -95,9 +86,8 @@ export function WorkflowControls({ hasTrigger, onNodesChange, onTriggerAdded, on
     }
   }, [addNode, dropHandlerRef])
 
-  const addTriggerFromModal = (id: TriggerId) => {
-    addNode({ kind: 'trigger', nodeType: 'trigger', triggerId: id, label: TRIGGER_LABELS[id] })
-    setModalOpen(false)
+  const addManualTrigger = () => {
+    addNode({ kind: 'trigger', nodeType: 'trigger', triggerId: 'manual', label: 'Manual Trigger' })
   }
 
   return (
@@ -106,13 +96,7 @@ export function WorkflowControls({ hasTrigger, onNodesChange, onTriggerAdded, on
         onAddNode={(entry) => addNode(entry)}
         triggerDisabled={hasTrigger}
       />
-      {!hasTrigger && <AddTriggerButton onClick={() => setModalOpen(true)} />}
-      {modalOpen && (
-        <TriggerSelectModal
-          onSelect={addTriggerFromModal}
-          onClose={() => setModalOpen(false)}
-        />
-      )}
+      {!hasTrigger && <AddTriggerButton onClick={addManualTrigger} />}
     </>
   )
 }
