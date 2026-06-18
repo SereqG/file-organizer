@@ -9,6 +9,7 @@ from app.modules.workflows.application.nodes.folder_helpers import (
     find_directory_item_by_path,
     resolve_incremental_name,
 )
+from app.modules.workflows.application.nodes.tree_lookup import path_exists
 from app.modules.workflows.domain.models import ExecutionContext, LogEntry, PlannedAction, WorkflowItem, WorkflowNode
 
 
@@ -61,7 +62,7 @@ def execute_create_folder(node: WorkflowNode, context: ExecutionContext, scope: 
 
     target_path = Path(parent_item.path) / folder_name
 
-    if not target_path.exists():
+    if not path_exists(context, str(target_path)):
         return _create_folder(target_path, node, context)
 
     if if_exists == "reuse_existing":

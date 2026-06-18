@@ -7,6 +7,7 @@ from app.modules.workflows.application.nodes.folder_helpers import (
     resolve_incremental_name,
 )
 from app.modules.workflows.application.nodes.transfer_helpers import rewrite_item_paths
+from app.modules.workflows.application.nodes.tree_lookup import path_exists
 from app.modules.workflows.domain.models import ExecutionContext, LogEntry, PlannedAction, WorkflowNode
 
 
@@ -24,7 +25,7 @@ def execute_rename_folder(node: WorkflowNode, context: ExecutionContext, scope: 
     source = Path(folder_path)
     target = source.parent / new_name
 
-    if target.exists():
+    if path_exists(context, str(target)):
         if if_exists == "rename_incrementally":
             target = resolve_incremental_name(target)
         else:

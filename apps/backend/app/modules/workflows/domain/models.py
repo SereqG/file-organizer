@@ -122,3 +122,7 @@ class ExecutionContext:
     on_node_start: Optional[Callable[[str, str], None]] = None  # (node_id, node_name)
     start_time: float = field(default_factory=time.time)
     log_entries: list[LogEntry] = field(default_factory=list)
+    # Filled only when execute_workflow is called with stop_before. The tree state on entry to that
+    # node (a deep copy, because nodes mutate items in place) and the item ids in scope there.
+    snapshot_items: Optional[list[WorkflowItem]] = None
+    snapshot_scope_ids: set[str] = field(default_factory=set)

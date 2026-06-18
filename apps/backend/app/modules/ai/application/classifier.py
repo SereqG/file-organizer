@@ -10,6 +10,7 @@ import filetype
 from pypdf import PdfReader
 
 from app.config import settings
+from app.modules.ai.application import classification_cache
 from app.modules.ai.domain.constants import CONFIDENCE_THRESHOLDS
 from app.modules.ai.domain.models import Category, ClassificationScore
 from app.modules.ai.infrastructure.openrouter_client import get_client
@@ -127,21 +128,44 @@ def classify_items(
     if on_items_classified and items_without_candidates:
         on_items_classified([(item.name, None) for item in items_without_candidates])
 
-    all_scores: list[ClassificationScore] = []
-    client = get_client()
+    # Cache-first scoring: read every (item, candidate-category) score from the in-memory cache,
+    # keyed on content fingerprints. Only pairs that miss are sent to the model, and only for the
+    # items that miss — so re-simulating an unchanged workspace makes zero model calls.
+    model_name = settings.openrouter_model
+    item_fp = {item.id: classification_cache.item_fingerprint(item) for item in items_to_classify}
+    cat_fp = {cat.id: classification_cache.category_fingerprint(cat) for cat in categories}
 
-    for i in range(0, len(items_to_classify), _BATCH_SIZE):
-        batch = items_to_classify[i : i + _BATCH_SIZE]
-        relevant_cat_ids: set[str] = set()
+    score_map: dict[tuple[str, str], float] = {}
+    missing_by_item: dict[str, set[str]] = {}
+    for item in items_to_classify:
+        for cat_id in candidates[item.id]:
+            cached = classification_cache.get(model_name, item_fp[item.id], cat_fp[cat_id])
+            if cached is None:
+                missing_by_item.setdefault(item.id, set()).add(cat_id)
+            else:
+                score_map[(item.id, cat_id)] = cached
+
+    dirty_items = [item for item in items_to_classify if item.id in missing_by_item]
+    clean_items = [item for item in items_to_classify if item.id not in missing_by_item]
+
+    _logger.info("Cache lookup complete | dirty=%d cached=%d", len(dirty_items), len(clean_items))
+
+    # Items fully served from cache still need a callback so logs/preview show them.
+    if on_items_classified and clean_items:
+        on_items_classified(_resolve_results(clean_items, score_map, candidates, categories, allow_duplicate))
+
+    client = get_client() if dirty_items else None
+    total_batches = -(-len(dirty_items) // _BATCH_SIZE)
+    for i in range(0, len(dirty_items), _BATCH_SIZE):
+        batch = dirty_items[i : i + _BATCH_SIZE]
+        missing_cat_ids: set[str] = set()
         for item in batch:
-            relevant_cat_ids |= candidates[item.id]
-        relevant_cats = [category_by_id[cid] for cid in relevant_cat_ids]
+            missing_cat_ids |= missing_by_item[item.id]
+        relevant_cats = [category_by_id[cid] for cid in missing_cat_ids]
 
-        batch_names = [item.name for item in batch]
-        cat_names = [c.name for c in relevant_cats]
         _logger.info(
             "Batch %d/%d | items=%s | categories=%s",
-            i // _BATCH_SIZE + 1, -(-len(items_to_classify) // _BATCH_SIZE), batch_names, cat_names,
+            i // _BATCH_SIZE + 1, total_batches, [item.name for item in batch], [c.name for c in relevant_cats],
         )
 
         error, scores = _classify_batch(client, batch, relevant_cats)
@@ -150,16 +174,13 @@ def classify_items(
             return error, None
 
         for score in scores:
-            _logger.debug("  Score: item_id=%s category_id=%s confidence=%.3f", score.item_id, score.category_id, score.confidence)
+            if score.item_id not in item_fp or score.category_id not in cat_fp:
+                continue  # ignore any pair the model volunteered that we did not ask about
+            score_map[(score.item_id, score.category_id)] = score.confidence
+            classification_cache.put(model_name, item_fp[score.item_id], cat_fp[score.category_id], score.confidence)
 
         if on_items_classified:
-            on_items_classified(_resolve_batch_results(batch, scores, relevant_cats, candidates, categories, allow_duplicate))
-
-        all_scores.extend(scores)
-
-    score_map: dict[tuple[str, str], float] = {}
-    for score in all_scores:
-        score_map[(score.item_id, score.category_id)] = score.confidence
+            on_items_classified(_resolve_results(batch, score_map, candidates, categories, allow_duplicate))
 
     buckets = _build_buckets(items_to_classify, categories, score_map, candidates, allow_duplicate)
     for item in items_without_candidates:
@@ -381,26 +402,23 @@ def _classify_batch(
     return None, scores
 
 
-def _resolve_batch_results(
-    batch: list[WorkflowItem],
-    scores: list[ClassificationScore],
-    relevant_cats: list[Category],
+def _resolve_results(
+    items: list[WorkflowItem],
+    score_map: dict[tuple[str, str], float],
     candidates: dict[str, set[str]],
-    all_categories: list[Category],
+    categories: list[Category],
     allow_duplicate: bool,
 ) -> list[tuple[str, Optional[str]]]:
-    """Return ``(item_name, category_names | None)`` for each item in the batch.
-    Used by the ``on_items_classified`` callback to stream results as each LLM batch finishes."""
+    """Return ``(item_name, category_names | None)`` for each item, reading from the complete
+    score_map (cache ∪ fresh). Used by the ``on_items_classified`` callback to stream results for
+    both freshly classified batches and cache-only items."""
     results: list[tuple[str, Optional[str]]] = []
-    for item in batch:
+    for item in items:
         matches: list[tuple[Category, float]] = []
-        for cat in relevant_cats:
+        for cat in categories:
             if cat.id not in candidates.get(item.id, set()):
                 continue
-            confidence = next(
-                (s.confidence for s in scores if s.item_id == item.id and s.category_id == cat.id),
-                0.0,
-            )
+            confidence = score_map.get((item.id, cat.id), 0.0)
             threshold = CONFIDENCE_THRESHOLDS.get(cat.min_confidence, 0.65)
             if confidence >= threshold:
                 matches.append((cat, confidence))
@@ -410,7 +428,7 @@ def _resolve_batch_results(
         elif allow_duplicate:
             results.append((item.name, ", ".join(m[0].name for m in matches)))
         else:
-            best = max(matches, key=lambda p: (p[1], -all_categories.index(p[0])))
+            best = max(matches, key=lambda p: (p[1], -categories.index(p[0])))
             results.append((item.name, best[0].name))
     return results
 

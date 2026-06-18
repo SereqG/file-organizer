@@ -170,7 +170,7 @@ export function useWorkflowExecution() {
 
   useEffect(() => clearTimer, [clearTimer])
 
-  const start = useCallback(async (definition: WorkflowDefinition, rootPath: string) => {
+  const start = useCallback(async (definition: WorkflowDefinition, rootPath: string, previewToken?: string) => {
     clearTimer()
     attemptRef.current = 0
     startedAtRef.current = Date.now()
@@ -186,10 +186,24 @@ export function useWorkflowExecution() {
           workflow: { nodes: definition.nodes, edges: definition.edges, trigger: definition.trigger },
           rootPath,
           mode: 'run',
+          previewToken,
         }),
       })
     } catch {
       finish({ success: false, error: 'Could not start the workflow.', failedNodes: [], warnings: [] })
+      return
+    }
+
+    if (res.status === 409) {
+      // The workspace or workflow changed since the preview — surface it and force a fresh preview
+      // (the user must Run again to re-preview). Never start against stale inputs.
+      const data = await res.json().catch(() => ({}))
+      finish({
+        success: false,
+        error: data.error ?? 'The workspace or workflow changed since the preview. Review again.',
+        failedNodes: [],
+        warnings: [],
+      })
       return
     }
 

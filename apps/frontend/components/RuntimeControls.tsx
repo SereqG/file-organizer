@@ -5,13 +5,16 @@ import { LuPlay, LuLoaderCircle, LuSettings2 } from 'react-icons/lu'
 import { ControlButton } from './ControlButton'
 import { ExecutionResultPopup } from './ExecutionResultPopup'
 import { WorkflowPreviewModal } from './WorkflowPreviewModal'
+import { RunSettingsModal } from './RunSettingsModal'
 import { DecisionModal } from './DecisionModal'
 import type { ConfigRemap, ExecutionFailedNode, WorkflowDefinition, WorkflowNode } from '@/lib/types/workflow'
 import { useWorkflowReadiness } from '@/hooks/useWorkflowReadiness'
 import { useWorkflowExecution } from '@/hooks/useWorkflowExecution'
 import { useWorkflowRun } from '@/lib/contexts/WorkflowRunContext'
 import type { WorkflowPreview } from '@/lib/types/workflow'
-import { PREDEFINED_CATEGORIES, loadCustomCategories } from '@/lib/workflow/stores/categoryLibrary'
+import { resolveRunNodes } from '@/lib/workflow/resolveRunNodes'
+
+const DRY_RUN_ONLY_KEY = 'workflow:dryRunOnly'
 
 interface RuntimeControlsProps {
   definition: WorkflowDefinition | null
@@ -20,25 +23,6 @@ interface RuntimeControlsProps {
   onRunComplete: (failedNodes: ExecutionFailedNode[]) => void
   onConfigRemap: (remaps: ConfigRemap[]) => void
   isExploring: boolean
-}
-
-function resolveAiClassifierCategories(
-  nodes: WorkflowNode[],
-  getCategoryById: (id: string) => { id: string; name: string; description: string; itemType: string; extensions: string[]; minConfidence: string } | undefined,
-): WorkflowNode[] {
-  return nodes.map((node) => {
-    if (node.type !== 'ai_classifier') return node
-    const resolvedCategories = node.config.categoryIds
-      .map((id) => getCategoryById(id))
-      .filter(Boolean)
-    return {
-      ...node,
-      config: {
-        categories: resolvedCategories,
-        allowDuplicate: node.config.allowDuplicate,
-      },
-    } as unknown as WorkflowNode
-  })
 }
 
 async function previewWorkflow(
@@ -66,6 +50,8 @@ async function previewWorkflow(
     actions: data.actions ?? [],
     warnings: data.warnings ?? [],
     failedNodes: data.failedNodes ?? [],
+    finalTree: data.finalTree ?? null,
+    previewToken: data.previewToken,
   }
 }
 
@@ -74,12 +60,16 @@ export function RuntimeControls({ definition, rootPath, onRunStart, onRunComplet
   const [isPreviewing, setIsPreviewing] = useState(false)
   const [preview, setPreview] = useState<WorkflowPreview | null>(null)
   const [pendingResolvedNodes, setPendingResolvedNodes] = useState<WorkflowNode[] | null>(null)
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [isDryRunOnly, setIsDryRunOnly] = useState(() => {
+    try { return localStorage.getItem(DRY_RUN_ONLY_KEY) === 'true' } catch { return false }
+  })
   const execution = useWorkflowExecution()
   const { setRunState } = useWorkflowRun()
 
-  function getCategoryByIdFresh(id: string) {
-    const all = [...PREDEFINED_CATEGORIES, ...loadCustomCategories()]
-    return all.find((c) => c.id === id)
+  function handleToggleDryRunOnly(value: boolean) {
+    setIsDryRunOnly(value)
+    try { localStorage.setItem(DRY_RUN_ONLY_KEY, String(value)) } catch {}
   }
 
   useEffect(() => {
@@ -99,7 +89,7 @@ export function RuntimeControls({ definition, rootPath, onRunStart, onRunComplet
   async function handleRun() {
     if (!definition) return
 
-    const resolvedNodes = resolveAiClassifierCategories(definition.nodes, getCategoryByIdFresh)
+    const resolvedNodes = resolveRunNodes(definition.nodes)
     const resolvedById = new Map(resolvedNodes.map((r) => [r.id, r.config as Record<string, unknown>]))
     const orphanedNode = definition.nodes.find(
       (n) =>
@@ -133,9 +123,10 @@ export function RuntimeControls({ definition, rootPath, onRunStart, onRunComplet
 
   function handleConfirm() {
     if (!definition || !pendingResolvedNodes) return
+    const token = preview?.previewToken
     setPreview(null)
     const resolvedDefinition = { ...definition, nodes: pendingResolvedNodes }
-    void execution.start(resolvedDefinition, rootPath)
+    void execution.start(resolvedDefinition, rootPath, token)
     setPendingResolvedNodes(null)
   }
 
@@ -163,7 +154,7 @@ export function RuntimeControls({ definition, rootPath, onRunStart, onRunComplet
 
         <div className="h-5 w-px bg-white/10" />
 
-        <ControlButton label="Settings" onClick={() => { }}>
+        <ControlButton label="Settings" onClick={() => setIsSettingsOpen(true)}>
           <LuSettings2 size={14} />
         </ControlButton>
       </div>
@@ -173,6 +164,15 @@ export function RuntimeControls({ definition, rootPath, onRunStart, onRunComplet
           preview={preview}
           onConfirm={handleConfirm}
           onCancel={handleCancel}
+          isDryRunOnly={isDryRunOnly}
+        />
+      )}
+
+      {isSettingsOpen && (
+        <RunSettingsModal
+          isDryRunOnly={isDryRunOnly}
+          onToggleDryRunOnly={handleToggleDryRunOnly}
+          onClose={() => setIsSettingsOpen(false)}
         />
       )}
 

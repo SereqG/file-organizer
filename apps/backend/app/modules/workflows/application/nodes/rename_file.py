@@ -6,6 +6,7 @@ from app.modules.workflows.application.nodes.file_helpers import (
     find_file_item_by_path,
     resolve_incremental_file_name,
 )
+from app.modules.workflows.application.nodes.tree_lookup import path_exists
 from app.modules.workflows.domain.models import ExecutionContext, LogEntry, PlannedAction, WorkflowNode
 
 
@@ -24,7 +25,7 @@ def execute_rename_file(node: WorkflowNode, context: ExecutionContext, scope: se
     # The user edits only the stem; the original extension is preserved.
     target = source.with_name(f"{new_name}{source.suffix}")
 
-    if target.exists():
+    if path_exists(context, str(target)):
         if if_exists == "rename_incrementally":
             target = resolve_incremental_file_name(target)
         else:

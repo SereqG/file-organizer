@@ -1,3 +1,5 @@
+import type { FileTreeNode } from './explore';
+
 export interface WorkflowInputField {
   id: string;
   name: string;
@@ -328,6 +330,18 @@ export interface WorkflowPreview {
   actions: PlannedAction[];
   warnings: ExecutionWarning[];
   failedNodes: ExecutionFailedNode[];
+  // The predicted final workspace shape (resulting tree), shown alongside the action list.
+  finalTree?: FileTreeNode | null;
+  // Consistency token; passed back on run so the backend can reject a run against changed inputs.
+  previewToken?: string;
+}
+
+// Per-node editor simulation: the predicted tree on entry to a node and the item ids in scope there.
+export interface NodeSimulationResult {
+  tree: FileTreeNode | null;
+  scopeItemIds: string[];
+  ok: boolean;
+  error: string | null;
 }
 
 export type LogEntryKind = 'moved' | 'copied' | 'created' | 'deleted' | 'renamed' | 'skipped' | 'warning' | 'started' | 'classified' | 'unclassified';

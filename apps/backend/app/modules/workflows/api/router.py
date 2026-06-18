@@ -14,6 +14,12 @@ from app.modules.workflows.application.execute_workflow import (
     execute_workflow as run_workflow,
 )
 from app.modules.workflows.application.execution_store import ExecutionState
+from app.modules.workflows.application.item_tree import items_to_tree
+from app.modules.workflows.application.preview_token import (
+    preview_token,
+    workflow_hash,
+    workspace_fingerprint,
+)
 from app.modules.workflows.application.scan_directory import scan_directory
 from app.modules.workflows.domain.models import (
     ExecutionContext,
@@ -68,6 +74,10 @@ class ExecuteWorkflowRequest(BaseModel):
     rootPath: str
     # "run" performs the workflow; "dryRun" simulates it (no disk writes) and returns a preview.
     mode: str = "run"
+    # dryRun only: capture the tree on entry to this node and halt (per-node editor simulation).
+    stopBefore: Optional[str] = None
+    # run only: the token returned by the preview, used to reject a run against changed inputs.
+    previewToken: Optional[str] = None
 
 
 def _build_workflow(request: WorkflowRequest) -> Workflow:
@@ -94,7 +104,7 @@ def _serialize_warnings(warnings: list[ExecutionWarning]) -> list[dict]:
     ]
 
 
-def _dry_run_preview(context: ExecutionContext, result: WorkflowExecutionResult) -> dict:
+def _dry_run_preview(context: ExecutionContext, result: WorkflowExecutionResult, token: str) -> dict:
     return {
         "executionId": str(context.execution_id),
         "mode": "dryRun",
@@ -113,6 +123,27 @@ def _dry_run_preview(context: ExecutionContext, result: WorkflowExecutionResult)
         "warnings": _serialize_warnings(result.warnings),
         "failedNodes": [{"id": n.id, "error": n.error} for n in result.failed_nodes],
         "configRemap": context.config_remaps,
+        # The predicted final workspace shape, for the "Result" tab in the preview modal.
+        "finalTree": items_to_tree(context.items, context.root_path),
+        "previewToken": token,
+    }
+
+
+def _stop_before_preview(context: ExecutionContext, result: WorkflowExecutionResult) -> dict:
+    """Per-node editor simulation: the tree on entry to the stop_before node and the scope there.
+    ``ok`` is False when the node was never reached (upstream invalid/unreachable)."""
+    reached = context.snapshot_items is not None
+    error = result.error
+    if not reached and error is None:
+        error = "This node is not reachable from the trigger yet, or an upstream node is incomplete."
+    return {
+        "executionId": str(context.execution_id),
+        "mode": "dryRun",
+        "ok": reached and result.error is None,
+        "error": error,
+        "predictedTree": items_to_tree(context.snapshot_items, context.root_path) if reached else None,
+        "scopeItemIds": sorted(context.snapshot_scope_ids),
+        "warnings": _serialize_warnings(result.warnings),
     }
 
 
@@ -157,10 +188,28 @@ async def execute_workflow(body: ExecuteWorkflowRequest):
 
     workflow = _build_workflow(body.workflow)
 
+    # Token over the fresh scan + the as-posted workflow, computed BEFORE any dry-run mutation or
+    # in-run config remap, so preview and run agree when nothing changed.
+    token = preview_token(workspace_fingerprint(context.items), workflow_hash(body.workflow.model_dump()))
+
     if body.mode == "dryRun":
         context.dry_run = True
+        if body.stopBefore:
+            result = run_workflow(workflow, context, stop_before=body.stopBefore)
+            return _stop_before_preview(context, result)
         result = run_workflow(workflow, context)
-        return _dry_run_preview(context, result)
+        return _dry_run_preview(context, result, token)
+
+    if not body.previewToken:
+        return JSONResponse(
+            status_code=409,
+            content={"error": "Run requires a fresh preview.", "code": "PREVIEW_REQUIRED"},
+        )
+    if body.previewToken != token:
+        return JSONResponse(
+            status_code=409,
+            content={"error": "The workspace or workflow changed since the preview. Review again.", "code": "PREVIEW_STALE"},
+        )
 
     execution_id = await start_execution(workflow, context)
     return JSONResponse(status_code=202, content={"executionId": execution_id, "status": "running"})
