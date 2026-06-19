@@ -1,10 +1,12 @@
 'use client'
 
+import { useState } from 'react'
 import { LuCircleAlert } from 'react-icons/lu'
 import type { FileTreeNode } from '@/lib/types/explore'
 import { useExploreJob } from '@/hooks/useExploreJob'
 import { DepthConfirmModal } from './DepthConfirmModal'
 import { FileTree } from './FileTree'
+import { WorkspaceSelectorTree } from './WorkspaceSelectorTree'
 
 const SLOW_SCAN_THRESHOLD_S = 8
 
@@ -16,6 +18,7 @@ interface Props {
 
 export function FolderExplorer({ sessionId, onNextStep, onBack }: Props) {
   const { state, elapsedSeconds, startExplore, acceptPartialTree, cancelScan } = useExploreJob(sessionId)
+  const [selectedNode, setSelectedNode] = useState<FileTreeNode | null>(null)
 
   if (state.phase === 'idle' || state.phase === 'loading') {
     const isSlow = elapsedSeconds >= SLOW_SCAN_THRESHOLD_S
@@ -63,10 +66,17 @@ export function FolderExplorer({ sessionId, onNextStep, onBack }: Props) {
     )
   }
 
+  const effectiveSelected = selectedNode ?? state.tree
+
   return (
     <div className="mt-8">
-      <p className="mb-3 text-xs text-white/30 font-mono">{state.tree.path}</p>
-      <FileTree root={state.tree} />
+      <p className="mb-1 text-xs text-white/30">Select a workspace folder</p>
+      <p className="mb-3 text-xs text-white/20 font-mono truncate">{effectiveSelected.path}</p>
+      <WorkspaceSelectorTree
+        root={state.tree}
+        selectedId={effectiveSelected.id}
+        onSelect={setSelectedNode}
+      />
       <div className="mt-5 flex gap-3">
         {onBack && (
           <button
@@ -82,7 +92,7 @@ export function FolderExplorer({ sessionId, onNextStep, onBack }: Props) {
           </button>
         )}
         <button
-          onClick={() => onNextStep(state.tree.path, state.tree, sessionId)}
+          onClick={() => onNextStep(effectiveSelected.path, effectiveSelected, sessionId)}
           className="
             flex-1 rounded-xl px-5 py-3.5 text-sm font-medium
             bg-orange-500/10 border border-orange-500/20 text-orange-400

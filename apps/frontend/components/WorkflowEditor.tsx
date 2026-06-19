@@ -32,6 +32,7 @@ import { MoveConfigModal } from './nodes/move_node/MoveConfigModal'
 import { CopyConfigModal } from './nodes/copy_node/CopyConfigModal'
 import { AiClassifierConfigModal } from './nodes/ai_classifier_node/AiClassifierConfigModal'
 import { WorkflowControls } from './WorkflowControls'
+import { ProjectInfoModal } from './ProjectInfoModal'
 
 interface WorkflowEditorProps {
   workspacePath: string
@@ -45,6 +46,7 @@ export function WorkflowEditor({ workspacePath, workspaceTree, sessionId, onTree
   const [hasRun, setHasRun] = useState(false)
   const [logsPanelOpen, setLogsPanelOpen] = useState(false)
   const [libraryOpen, setLibraryOpen] = useState(false)
+  const [infoOpen, setInfoOpen] = useState(false)
 
   const setRunState = useCallback((patch: Partial<WorkflowRunState>) => {
     setRunStateRaw((s) => ({ ...s, ...patch }))
@@ -220,6 +222,7 @@ export function WorkflowEditor({ workspacePath, workspaceTree, sessionId, onTree
               onRunComplete={handleRunComplete}
               onConfigRemap={applyConfigRemapToCanvas}
               onReexplore={() => startExplore(false)}
+              onShowInfo={() => setInfoOpen(true)}
               isExploring={isExploring}
             />
             <WorkflowControls
@@ -363,6 +366,8 @@ export function WorkflowEditor({ workspacePath, workspaceTree, sessionId, onTree
               onApplyDefinition={loadWorkflow}
             />
           )}
+
+          {infoOpen && <ProjectInfoModal onClose={() => setInfoOpen(false)} />}
         </div>
     </SimulationContext.Provider>
     </NodeConfigContext.Provider>
