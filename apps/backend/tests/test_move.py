@@ -1,6 +1,5 @@
 """Stage 5 — Move nodes (moveFile / moveFolder) and the shared transfer core."""
 
-import os
 from types import SimpleNamespace
 
 from app.modules.workflows.application import execute_workflow as engine
@@ -236,7 +235,12 @@ def test_move_cross_filesystem_skips(tmp_path, monkeypatch):
     dest.mkdir()
     ctx = ctx_from(tmp_path)  # scan with the real os.stat before patching
 
+    real_stat = transfer_helpers.os.stat
+
     def fake_stat(path, *args, **kwargs):
+        # Delegate to the real stat (so a missing path still raises and Path.exists stays honest
+        # in the assertions below); only the device id is faked to simulate a cross-filesystem dest.
+        real_stat(path, *args, **kwargs)
         return SimpleNamespace(st_dev=2 if str(path) == str(dest) else 1)
 
     monkeypatch.setattr(transfer_helpers.os, "stat", fake_stat)

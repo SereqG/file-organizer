@@ -6,6 +6,7 @@ from app.modules.workflows.application.nodes.file_helpers import (
     find_file_item_by_path,
     resolve_incremental_file_name,
 )
+from app.modules.workflows.application.nodes.transfer_helpers import guard_target
 from app.modules.workflows.application.nodes.tree_lookup import path_exists
 from app.modules.workflows.domain.models import ExecutionContext, LogEntry, PlannedAction, WorkflowNode
 
@@ -30,6 +31,10 @@ def execute_rename_file(node: WorkflowNode, context: ExecutionContext, scope: se
             target = resolve_incremental_file_name(target)
         else:
             return f"A file named {target.name} already exists.", None, None
+
+    guard_error = guard_target(context, str(target))
+    if guard_error:
+        return guard_error, None, None
 
     if not context.dry_run:
         try:

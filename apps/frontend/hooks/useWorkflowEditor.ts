@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNodesState, useEdgesState, addEdge } from '@xyflow/react'
 import type { Edge, Connection } from '@xyflow/react'
-import type { AiClassifierNode as AiClassifierNodeType, ConfigRemap, CopyFileNode as CopyNodeConfigType, CreateFolderNode as CreateFolderNodeType, DeleteFileNode as DeleteFileNodeType, DeleteFolderNode as DeleteFolderNodeType, ExecutionFailedNode, IfNode as IfNodeType, MoveFileNode as MoveNodeConfigType, RenameFileNode as RenameFileNodeType, RenameFolderNode as RenameFolderNodeType, SwitchNode as SwitchNodeType } from '@/lib/types/workflow'
+import type { AiClassifierNode as AiClassifierNodeType, ConfigRemap, CopyFileNode as CopyNodeConfigType, CreateFolderNode as CreateFolderNodeType, DeleteFileNode as DeleteFileNodeType, DeleteFolderNode as DeleteFolderNodeType, ExecutionFailedNode, IfNode as IfNodeType, MoveFileNode as MoveNodeConfigType, RenameFileNode as RenameFileNodeType, RenameFolderNode as RenameFolderNodeType, SwitchNode as SwitchNodeType, WorkflowDefinition } from '@/lib/types/workflow'
 import { AI_CLASSIFIER_UNCLASSIFIED_HANDLE, SWITCH_DEFAULT_HANDLE } from '@/lib/types/workflow'
 import { SWITCH_DEFAULT_COLOR, switchOutputColor } from '@/lib/workflow/utils/switchColors'
 import { AI_CLASSIFIER_UNCLASSIFIED_COLOR, aiClassifierOutputColor } from '@/lib/workflow/utils/aiClassifierColors'
@@ -54,6 +54,33 @@ function aiClassifierEdgeStyle(nodes: AppNode[], connection: Connection): { stro
   return { stroke: index >= 0 ? aiClassifierOutputColor(index) : AI_CLASSIFIER_UNCLASSIFIED_COLOR }
 }
 
+// Fallback positions for any saved node missing one (older saves) — a gentle diagonal cascade so
+// nodes never stack exactly on top of each other.
+function fallbackPosition(index: number): { x: number; y: number } {
+  return { x: 120 + index * 60, y: 120 + index * 90 }
+}
+
+/** Rebuild the React Flow nodes for a saved definition: the trigger plus each logical node, with
+ * its saved position and config restored. The canvas node `data` mirrors what node-add/config-save
+ * produce, so loaded nodes behave identically to ones built by hand. */
+function buildCanvasNodes(def: WorkflowDefinition): AppNode[] {
+  const trigger: AppNode = {
+    id: def.trigger.id,
+    type: 'trigger',
+    position: def.trigger.position ?? fallbackPosition(0),
+    data: { label: def.trigger.name, triggerId: 'manual' },
+  } as AppNode
+
+  const nodes = def.nodes.map((node, i) => ({
+    id: node.id,
+    type: node.type,
+    position: node.position ?? fallbackPosition(i + 1),
+    data: { label: node.name, config: node.config },
+  }) as AppNode)
+
+  return [trigger, ...nodes]
+}
+
 export function useWorkflowEditor() {
   const [mounted, setMounted] = useState(false)
   const [nodes, setNodes, onNodesChange] = useNodesState<AppNode>([])
@@ -77,6 +104,7 @@ export function useWorkflowEditor() {
     lastModifiedAt,
     addTrigger,
     removeTrigger,
+    loadDefinition,
     addGeneralNode,
     removeNode,
     updateIfNodeConfig,
@@ -97,6 +125,25 @@ export function useWorkflowEditor() {
   const handleTriggerAdded = useCallback((rfNodeId: string) => {
     addTrigger(rfNodeId)
   }, [addTrigger])
+
+  // Hydrate the canvas from a saved definition: rebuild the visual nodes/edges (restoring positions
+  // and branch-edge colors) and reset the definition so both stay in sync.
+  const loadWorkflow = useCallback((def: WorkflowDefinition) => {
+    const canvasNodes = buildCanvasNodes(def)
+    const canvasEdges: Edge[] = def.edges.map((e) => {
+      const connection: Connection = {
+        source: e.source,
+        target: e.target,
+        sourceHandle: e.sourceHandle ?? null,
+        targetHandle: e.targetHandle ?? null,
+      }
+      const style = switchEdgeStyle(canvasNodes, connection) ?? aiClassifierEdgeStyle(canvasNodes, connection)
+      return { id: e.id, source: e.source, target: e.target, sourceHandle: e.sourceHandle, targetHandle: e.targetHandle, ...(style ? { style } : {}) }
+    })
+    setNodes(canvasNodes)
+    setEdges(canvasEdges)
+    loadDefinition(def)
+  }, [setNodes, setEdges, loadDefinition])
 
   const handleGeneralNodeAdded = useCallback((id: string, nodeType: string, label: string) => {
     addGeneralNode(id, nodeType, label)
@@ -302,6 +349,7 @@ export function useWorkflowEditor() {
     onEdgesChange,
     handleTriggerAdded,
     handleGeneralNodeAdded,
+    loadWorkflow,
     handleNodesDelete,
     handleConnect,
     handleEdgesDelete,

@@ -204,6 +204,11 @@ export function useWorkflowDefinition() {
     setDefinition(null)
   }, [])
 
+  // Replace the whole definition at once — used when loading a saved workflow onto the canvas.
+  const loadDefinition = useCallback((next: WorkflowDefinition) => {
+    setDefinition(next)
+  }, [])
+
   const addGeneralNode = useCallback((id: string, nodeType: string, label: string) => {
     setDefinition((prev) => {
       if (!prev) return prev
@@ -374,6 +379,7 @@ export function useWorkflowDefinition() {
     lastModifiedAt,
     addTrigger,
     removeTrigger,
+    loadDefinition,
     addGeneralNode,
     removeNode,
     updateIfNodeConfig,

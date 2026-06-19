@@ -1,0 +1,8 @@
+Project sync — 2024-03-12
+
+Attendees: Alex, Priya, Sam
+- Reviewed the Q1 roadmap and agreed to ship the importer first.
+- Priya to draft the migration plan by Friday.
+- Sam to follow up with the design team about the new icons.
+
+Next meeting: 2024-03-19

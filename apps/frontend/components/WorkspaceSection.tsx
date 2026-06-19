@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from 'react'
 import type { FileTreeNode } from '@/lib/types/explore'
-import { WorkspacePathForm } from './WorkspacePathForm'
+import { SandboxOnboarding } from './SandboxOnboarding'
 import { WorkflowEditor } from './WorkflowEditor'
 
 type WorkspaceState = {
@@ -160,8 +160,8 @@ function LandingPage({
           </div>
         </div>
 
-        {/* Form */}
-        <WorkspacePathForm
+        {/* Sandbox provisioning + folder picker */}
+        <SandboxOnboarding
           key={formVersion}
           onNextStep={onNextStep}
           onWorkspaceValidated={handleWorkspaceValidated}

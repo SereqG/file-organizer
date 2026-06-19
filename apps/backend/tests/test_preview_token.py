@@ -57,9 +57,10 @@ def _workflow(parent):
     }
 
 
-def test_preview_returns_token_and_final_tree(client, tmp_path):
+def test_preview_returns_token_and_final_tree(client, tmp_path, make_session):
+    session = make_session(tmp_path)
     res = client.post("/workflows/api/execute", json={
-        "workflow": _workflow(tmp_path), "rootPath": str(tmp_path), "mode": "dryRun",
+        "workflow": _workflow(tmp_path), "session_id": session, "rootPath": str(tmp_path), "mode": "dryRun",
     })
     assert res.status_code == 200
     data = res.json()
@@ -69,37 +70,59 @@ def test_preview_returns_token_and_final_tree(client, tmp_path):
     assert any(c["path"] == str(tmp_path / "made") for c in data["finalTree"]["children"])
 
 
-def test_run_without_token_is_rejected(client, tmp_path):
+def test_run_without_token_is_rejected(client, tmp_path, make_session):
+    session = make_session(tmp_path)
     res = client.post("/workflows/api/execute", json={
-        "workflow": _workflow(tmp_path), "rootPath": str(tmp_path), "mode": "run",
+        "workflow": _workflow(tmp_path), "session_id": session, "rootPath": str(tmp_path), "mode": "run",
     })
     assert res.status_code == 409
     assert res.json()["code"] == "PREVIEW_REQUIRED"
 
 
-def test_run_with_stale_token_is_rejected(client, tmp_path):
+def test_run_with_stale_token_is_rejected(client, tmp_path, make_session):
+    session = make_session(tmp_path)
     preview = client.post("/workflows/api/execute", json={
-        "workflow": _workflow(tmp_path), "rootPath": str(tmp_path), "mode": "dryRun",
+        "workflow": _workflow(tmp_path), "session_id": session, "rootPath": str(tmp_path), "mode": "dryRun",
     }).json()
     token = preview["previewToken"]
 
     (tmp_path / "intruder.txt").write_text("changed")  # workspace drifted since the preview
 
     res = client.post("/workflows/api/execute", json={
-        "workflow": _workflow(tmp_path), "rootPath": str(tmp_path), "mode": "run", "previewToken": token,
+        "workflow": _workflow(tmp_path), "session_id": session, "rootPath": str(tmp_path), "mode": "run", "previewToken": token,
     })
     assert res.status_code == 409
     assert res.json()["code"] == "PREVIEW_STALE"
 
 
-def test_run_with_matching_token_starts(client, tmp_path):
+def test_run_with_matching_token_starts(client, tmp_path, make_session):
+    session = make_session(tmp_path)
     preview = client.post("/workflows/api/execute", json={
-        "workflow": _workflow(tmp_path), "rootPath": str(tmp_path), "mode": "dryRun",
+        "workflow": _workflow(tmp_path), "session_id": session, "rootPath": str(tmp_path), "mode": "dryRun",
     }).json()
 
     res = client.post("/workflows/api/execute", json={
-        "workflow": _workflow(tmp_path), "rootPath": str(tmp_path), "mode": "run",
+        "workflow": _workflow(tmp_path), "session_id": session, "rootPath": str(tmp_path), "mode": "run",
         "previewToken": preview["previewToken"],
     })
     assert res.status_code == 202
     assert res.json()["status"] == "running"
+
+
+def test_run_rejects_root_outside_sandbox(client, tmp_path, make_session):
+    sandbox = tmp_path / "sandbox"
+    sandbox.mkdir()
+    session = make_session(sandbox)
+    res = client.post("/workflows/api/execute", json={
+        "workflow": _workflow(sandbox), "session_id": session, "rootPath": str(tmp_path), "mode": "dryRun",
+    })
+    assert res.status_code == 400
+    assert res.json()["code"] == "PATH_OUTSIDE_SANDBOX"
+
+
+def test_run_rejects_unknown_session(client, tmp_path):
+    res = client.post("/workflows/api/execute", json={
+        "workflow": _workflow(tmp_path), "session_id": "does-not-exist", "rootPath": str(tmp_path), "mode": "dryRun",
+    })
+    assert res.status_code == 400
+    assert res.json()["code"] == "SESSION_NOT_FOUND"

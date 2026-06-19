@@ -36,6 +36,7 @@ _TTL_SECONDS = 3600
 class ExecutionState:
     execution_id: str
     context: ExecutionContext
+    session_id: str = ""
     status: str = STATUS_RUNNING
     current_node_id: Optional[str] = None
     pending_decision: Optional[dict] = None
@@ -56,7 +57,7 @@ _store_lock = threading.Lock()
 
 
 def create(execution_id: str, context: ExecutionContext) -> ExecutionState:
-    state = ExecutionState(execution_id=execution_id, context=context)
+    state = ExecutionState(execution_id=execution_id, context=context, session_id=context.session_id)
     with _store_lock:
         _gc_locked()
         _executions[execution_id] = state
@@ -66,6 +67,18 @@ def create(execution_id: str, context: ExecutionContext) -> ExecutionState:
 def get(execution_id: str) -> Optional[ExecutionState]:
     with _store_lock:
         return _executions.get(execution_id)
+
+
+def has_active_session_run(session_id: str) -> bool:
+    """True when the session already has a non-terminal run — the basis for the single-run lock."""
+    if not session_id:
+        return False
+    with _store_lock:
+        _gc_locked()
+        return any(
+            state.session_id == session_id and not state.is_terminal()
+            for state in _executions.values()
+        )
 
 
 def _gc_locked() -> None:

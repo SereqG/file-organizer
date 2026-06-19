@@ -1,3 +1,9 @@
+"""Denylist validator for an absolute host path.
+
+Retained (unused by the active sandboxed flow) for a possible future self-host mode. The sandboxed
+demo confines paths with an allowlist instead — see ``modules/sandbox/application/containment.py``.
+"""
+
 import os
 import platform
 from dataclasses import dataclass

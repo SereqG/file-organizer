@@ -10,9 +10,37 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from typing import Optional
 
 from app.modules.workflows.domain.models import ExecutionContext, ExecutionWarning, WorkflowNode
 from app.modules.workflows.domain import warning_codes
+
+
+# --- write-time containment guard ------------------------------------------
+
+
+def guard_target(context: ExecutionContext, target_path: str) -> Optional[str]:
+    """Defense-in-depth check run by every mutating handler immediately before a syscall.
+
+    Re-resolves the *real* target and asserts it is still inside the session's sandbox, and rejects
+    a symlinked target. Catches paths produced by config-remaps and any symlink that appeared after
+    scan time (the scanner only skips symlinks on read). No-op in dry-run (no disk writes) and when
+    no sandbox is configured (engine unit tests), so it never changes those paths' behaviour.
+
+    Returns an error message when the target escapes, else ``None``.
+    """
+    if context.dry_run or not context.sandbox_root:
+        return None
+    try:
+        if Path(target_path).is_symlink():
+            return f"Sandbox containment violation: {target_path} is a symlink."
+        real = Path(os.path.realpath(target_path))
+        root_real = Path(os.path.realpath(context.sandbox_root))
+        if real != root_real and not real.is_relative_to(root_real):
+            return f"Sandbox containment violation: {target_path} escapes the sandbox."
+    except OSError:
+        return f"Sandbox containment violation: cannot resolve {target_path}."
+    return None
 
 
 # --- path primitives -------------------------------------------------------

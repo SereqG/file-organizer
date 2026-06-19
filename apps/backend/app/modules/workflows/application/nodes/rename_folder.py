@@ -6,7 +6,7 @@ from app.modules.workflows.application.nodes.folder_helpers import (
     find_directory_item_by_path,
     resolve_incremental_name,
 )
-from app.modules.workflows.application.nodes.transfer_helpers import rewrite_item_paths
+from app.modules.workflows.application.nodes.transfer_helpers import guard_target, rewrite_item_paths
 from app.modules.workflows.application.nodes.tree_lookup import path_exists
 from app.modules.workflows.domain.models import ExecutionContext, LogEntry, PlannedAction, WorkflowNode
 
@@ -30,6 +30,10 @@ def execute_rename_folder(node: WorkflowNode, context: ExecutionContext, scope: 
             target = resolve_incremental_name(target)
         else:
             return f"A folder named {new_name} already exists.", None, None
+
+    guard_error = guard_target(context, str(target))
+    if guard_error:
+        return guard_error, None, None
 
     if not context.dry_run:
         try:

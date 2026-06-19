@@ -12,8 +12,9 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from app.modules.workflows.application import execution_store
-from app.modules.workflows.application.execute_workflow import execute_workflow
+from app.config import settings
+from app.modules.workflows.application import execution_store, run_store
+from app.modules.workflows.application.execute_workflow import CANCELLED_ERROR, execute_workflow
 from app.modules.workflows.application.execution_store import ExecutionState
 from app.modules.workflows.domain.models import ExecutionContext, Workflow
 
@@ -57,27 +58,71 @@ def _flush_execution_log(log_path: Path, context: ExecutionContext, status: str)
             f.write(line + "\n")
 
 
+def _run_summary(state: ExecutionState) -> dict:
+    """Compact, persistable digest of a finished run for the history list."""
+    context = state.context
+    result = state.result
+    error = result.error if result and result.error not in (None, CANCELLED_ERROR) else None
+    return {
+        "rootPath": context.root_path,
+        "executedNodes": len(result.executed_node_ids) if result else 0,
+        "warnings": len(context.warnings),
+        "error": error,
+    }
+
+
 def _set_current_node(state: ExecutionState, node_id: str) -> None:
     with state.lock:
         state.current_node_id = node_id
         state.updated_at = time.time()
 
 
+async def _runtime_watchdog(state: ExecutionState) -> None:
+    """Cancel a run whose *active* execution time exceeds ``max_runtime_seconds``. Time spent
+    awaiting a user decision does not count, so a slow human never trips the cap. Cancellation takes
+    effect at the engine's next between-node check (see ``ExecutionContext.check_cancelled``)."""
+    limit = settings.max_runtime_seconds
+    if limit <= 0:
+        return
+    step = 0.25
+    active = 0.0
+    try:
+        while True:
+            await asyncio.sleep(step)
+            if state.is_terminal():
+                return
+            if state.status == execution_store.STATUS_AWAITING_INPUT:
+                continue
+            active += step
+            if active > limit:
+                execution_store.cancel(state)
+                return
+    except asyncio.CancelledError:
+        return
+
+
 async def _run(state: ExecutionState, workflow: Workflow) -> None:
     loop = asyncio.get_running_loop()
     log_path = _init_execution_log(state.execution_id, state.context)
+    run_store.record_start(state.execution_id, state.context.session_id, str(log_path))
 
     def blocking() -> None:
         state.context.request_decision = lambda payload: execution_store.request_decision(state, payload)
         state.context.on_node_start = lambda node_id, name: _set_current_node(state, node_id)
+        state.context.check_cancelled = lambda: state.cancelled
         return execute_workflow(workflow, state.context)
 
+    watchdog = asyncio.create_task(_runtime_watchdog(state))
     try:
         result = await loop.run_in_executor(None, blocking)
     except Exception as exc:  # noqa: BLE001 - surface any unexpected worker failure as a failed run.
         execution_store.fail(state, f"Execution worker crashed: {exc}")
         _flush_execution_log(log_path, state.context, "crashed")
+        run_store.record_finish(state.execution_id, state.context.session_id, state.status, _run_summary(state))
         return
+    finally:
+        watchdog.cancel()
 
     execution_store.finish(state, result)
     _flush_execution_log(log_path, state.context, state.status)
+    run_store.record_finish(state.execution_id, state.context.session_id, state.status, _run_summary(state))

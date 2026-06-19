@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { ReactFlow, Background, BackgroundVariant } from '@xyflow/react'
 import type { FileTreeNode } from '@/lib/types/explore'
-import type { ExecutionFailedNode } from '@/lib/types/workflow'
+import type { ExecutionFailedNode, WorkflowDefinition, WorkflowNode, WorkflowTriggerNode } from '@/lib/types/workflow'
 import { useWorkflowEditor } from '@/hooks/useWorkflowEditor'
 import { useExploreJob } from '@/hooks/useExploreJob'
 import { useWorkflowSimulation } from '@/hooks/useWorkflowSimulation'
@@ -19,6 +19,8 @@ import { BottomControls } from './BottomControls'
 import { DepthConfirmModal } from './DepthConfirmModal'
 import { LogsPanelButton } from './LogsPanelButton'
 import { LogsPanel } from './LogsPanel'
+import { WorkflowLibraryButton } from './WorkflowLibraryButton'
+import { WorkflowLibraryPanel } from './WorkflowLibraryPanel'
 import { IfConfigModal } from './nodes/if_node/IfConfigModal'
 import { SwitchConfigModal } from './nodes/switch_node/SwitchConfigModal'
 import { CreateFolderConfigModal } from './nodes/create_folder_node/CreateFolderConfigModal'
@@ -42,6 +44,7 @@ export function WorkflowEditor({ workspacePath, workspaceTree, sessionId, onTree
   const [runState, setRunStateRaw] = useState<WorkflowRunState>({ isRunning: false, currentNodeId: null, logEntries: [] })
   const [hasRun, setHasRun] = useState(false)
   const [logsPanelOpen, setLogsPanelOpen] = useState(false)
+  const [libraryOpen, setLibraryOpen] = useState(false)
 
   const setRunState = useCallback((patch: Partial<WorkflowRunState>) => {
     setRunStateRaw((s) => ({ ...s, ...patch }))
@@ -85,6 +88,7 @@ export function WorkflowEditor({ workspacePath, workspaceTree, sessionId, onTree
     onEdgesChange,
     handleTriggerAdded,
     handleGeneralNodeAdded,
+    loadWorkflow,
     handleNodesDelete,
     handleConnect,
     handleEdgesDelete,
@@ -117,6 +121,18 @@ export function WorkflowEditor({ workspacePath, workspaceTree, sessionId, onTree
     markFailedNodes(failedNodes)
     startExplore(false)
   }, [markFailedNodes, startExplore])
+
+  // Serialize the current canvas for saving: the logical definition with each node's live React
+  // Flow position merged in, so a reload restores the layout. Null when there is nothing to save.
+  const buildSaveDefinition = useCallback((): WorkflowDefinition | null => {
+    if (!definition) return null
+    const positionById = new Map(nodes.map((n) => [n.id, n.position]))
+    return {
+      ...definition,
+      trigger: { ...definition.trigger, position: positionById.get(definition.trigger.id) ?? definition.trigger.position } as WorkflowTriggerNode,
+      nodes: definition.nodes.map((n) => ({ ...n, position: positionById.get(n.id) ?? n.position }) as WorkflowNode),
+    }
+  }, [definition, nodes])
 
   // Per-node predicted tree for the path-picker config modals. When a path-consuming modal is open,
   // simulate the workflow up to that node so its pickers preview upstream creates/moves/deletes.
@@ -337,6 +353,16 @@ export function WorkflowEditor({ workspacePath, workspaceTree, sessionId, onTree
 
           <LogsPanelButton panelOpen={logsPanelOpen} onToggle={() => setLogsPanelOpen((o) => !o)} />
           {logsPanelOpen && <LogsPanel onClose={() => setLogsPanelOpen(false)} />}
+
+          {!libraryOpen && <WorkflowLibraryButton onToggle={() => setLibraryOpen(true)} />}
+          {libraryOpen && (
+            <WorkflowLibraryPanel
+              onClose={() => setLibraryOpen(false)}
+              canSave={!!definition}
+              buildSaveDefinition={buildSaveDefinition}
+              onApplyDefinition={loadWorkflow}
+            />
+          )}
         </div>
     </SimulationContext.Provider>
     </NodeConfigContext.Provider>

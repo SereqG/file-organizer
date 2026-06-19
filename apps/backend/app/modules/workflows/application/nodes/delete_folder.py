@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Callable, Optional
 
 from app.modules.workflows.application.nodes.folder_helpers import find_directory_item_by_path
-from app.modules.workflows.application.nodes.transfer_helpers import is_descendant, top_level_only
+from app.modules.workflows.application.nodes.transfer_helpers import guard_target, is_descendant, top_level_only
 from app.modules.workflows.domain.models import ExecutionContext, LogEntry, PlannedAction, WorkflowItem, WorkflowNode
 
 
@@ -48,6 +48,10 @@ def execute_delete_folder(node: WorkflowNode, context: ExecutionContext, scope: 
             context.items.extend(removed)
 
     for target in targets:
+        guard_error = guard_target(context, target)
+        if guard_error:
+            restore_all()
+            return guard_error, None, None
         removed = [i for i in context.items if i.path == target or is_descendant(i.path, target)]
         if not context.dry_run:
             staging_dir = tempfile.mkdtemp(prefix="workflow_delete_")
