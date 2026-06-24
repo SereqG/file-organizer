@@ -6,6 +6,9 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 from typing import Any, Optional
 
+from app.config import settings
+from app.modules.sandbox.application import session_service
+from app.modules.sandbox.application.containment import confine
 from app.modules.workflows.application import execution_store
 from app.modules.workflows.application.execute_resumable import start_execution
 from app.modules.workflows.application.execute_workflow import (
@@ -71,6 +74,8 @@ class WorkflowRequest(BaseModel):
 
 class ExecuteWorkflowRequest(BaseModel):
     workflow: WorkflowRequest
+    # The session that owns the sandbox; the root and every node path are confined to it.
+    session_id: str
     rootPath: str
     # "run" performs the workflow; "dryRun" simulates it (no disk writes) and returns a preview.
     mode: str = "run"
@@ -78,6 +83,47 @@ class ExecuteWorkflowRequest(BaseModel):
     stopBefore: Optional[str] = None
     # run only: the token returned by the preview, used to reject a run against changed inputs.
     previewToken: Optional[str] = None
+
+
+# Path fields a node config may carry, by node type. Every one is containment-checked before a run.
+_NODE_SINGLE_PATH_FIELDS = {
+    "createFolder": "parentFolderPath",
+    "renameFolder": "folderPath",
+    "renameFile": "filePath",
+    "moveFile": "targetPath",
+    "moveFolder": "targetPath",
+}
+_NODE_LIST_PATH_FIELDS = {
+    "deleteFolder": "folderPaths",
+    "deleteFile": "filePaths",
+    "copyFile": "targetPaths",
+    "copyFolder": "targetPaths",
+}
+
+
+def _confine_node_paths(session_id: str, workflow: WorkflowRequest) -> Optional[str]:
+    """Reject the run if any node config path escapes the sandbox. Only containment is enforced —
+    not existence — because an upstream node may create the path during the run."""
+    def check(value: object, node_id: str) -> Optional[str]:
+        if isinstance(value, str) and value:
+            _, error = confine(session_id, value, must_exist=False, must_be_dir=False)
+            if error:
+                return f"Node {node_id} references a path outside the sandbox: {value}"
+        return None
+
+    for node in workflow.nodes:
+        single = _NODE_SINGLE_PATH_FIELDS.get(node.type)
+        if single:
+            error = check(node.config.get(single), node.id)
+            if error:
+                return error
+        listed = _NODE_LIST_PATH_FIELDS.get(node.type)
+        if listed:
+            for value in node.config.get(listed, []) or []:
+                error = check(value, node.id)
+                if error:
+                    return error
+    return None
 
 
 def _build_workflow(request: WorkflowRequest) -> Workflow:
@@ -182,9 +228,32 @@ def _serialize_state(state: ExecutionState) -> dict:
 
 @router.post("/execute")
 async def execute_workflow(body: ExecuteWorkflowRequest):
+    # --- containment: the session's sandbox is the only place this run may touch ---
+    sandbox_root = session_service.get_sandbox_root(body.session_id)
+    if sandbox_root is None:
+        return JSONResponse(status_code=400, content={"error": "Session not found or expired.", "code": "SESSION_NOT_FOUND"})
+
+    root, root_error = confine(body.session_id, body.rootPath)
+    if root_error is not None:
+        return JSONResponse(status_code=400, content={"error": root_error.message, "code": root_error.code})
+
+    path_error = _confine_node_paths(body.session_id, body.workflow)
+    if path_error is not None:
+        return JSONResponse(status_code=400, content={"error": path_error, "code": "PATH_OUTSIDE_SANDBOX"})
+
+    if len(body.workflow.nodes) > settings.max_workflow_nodes:
+        return JSONResponse(
+            status_code=400,
+            content={"error": f"Workflow exceeds the maximum of {settings.max_workflow_nodes} nodes.", "code": "TOO_MANY_NODES"},
+        )
+
+    session_service.touch_session(body.session_id)
+
     context = ExecutionContext()
-    context.root_path = body.rootPath
-    context.items = scan_directory(body.rootPath)
+    context.session_id = body.session_id
+    context.sandbox_root = str(sandbox_root)
+    context.root_path = str(root)
+    context.items = scan_directory(str(root))
 
     workflow = _build_workflow(body.workflow)
 
@@ -209,6 +278,13 @@ async def execute_workflow(body: ExecuteWorkflowRequest):
         return JSONResponse(
             status_code=409,
             content={"error": "The workspace or workflow changed since the preview. Review again.", "code": "PREVIEW_STALE"},
+        )
+
+    # One active run per session — reject a second concurrent run to avoid racing the same sandbox.
+    if execution_store.has_active_session_run(body.session_id):
+        return JSONResponse(
+            status_code=409,
+            content={"error": "A run is already in progress for this session.", "code": "RUN_IN_PROGRESS"},
         )
 
     execution_id = await start_execution(workflow, context)

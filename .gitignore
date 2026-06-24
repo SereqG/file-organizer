@@ -48,3 +48,6 @@ Thumbs.db
 
 # Logs
 apps/backend/logs/
+
+# Sandboxed demo runtime data (per-session sandboxes + SQLite)
+apps/backend/var/

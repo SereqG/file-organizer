@@ -133,6 +133,14 @@ def execute_copy(
                     staging_dir = tempfile.mkdtemp(prefix="workflow_copy_")
                     shutil.move(str(dest), str(Path(staging_dir) / dest.name))
 
+            guard_error = helpers.guard_target(context, str(dest))
+            if guard_error:
+                if staging_dir is not None:
+                    shutil.move(str(Path(staging_dir) / dest.name), str(dest))
+                    shutil.rmtree(staging_dir, ignore_errors=True)
+                reverse()
+                return guard_error, None, None
+
             if not context.dry_run:
                 try:
                     if item_type == "directory":
@@ -161,6 +169,10 @@ def execute_copy(
             root_copied = True
 
         if not keep_original and root_copied:
+            guard_error = helpers.guard_target(context, root)
+            if guard_error:
+                reverse()
+                return guard_error, None, None
             removed_items = [i for i in context.items if i.path == root or helpers.is_descendant(i.path, root)]
             staging_dir = None
             if not context.dry_run:

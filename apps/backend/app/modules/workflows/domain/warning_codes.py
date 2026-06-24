@@ -15,3 +15,6 @@ COLLISION_SKIPPED = "COLLISION_SKIPPED"
 # A partially-in-scope directory was not transferred as a unit; its in-scope children were
 # handled individually (informational).
 PARTIAL_DIRECTORY = "PARTIAL_DIRECTORY"
+# A dry-run predicted the sandbox would exceed a per-session quota (files/folders/bytes). The same
+# condition aborts a real run with this code instead of warning.
+QUOTA_EXCEEDED = "QUOTA_EXCEEDED"

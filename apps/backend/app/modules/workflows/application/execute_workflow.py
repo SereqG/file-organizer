@@ -17,6 +17,8 @@ from app.modules.workflows.application.nodes.move import execute_move_file, exec
 from app.modules.workflows.application.nodes.rename_file import execute_rename_file
 from app.modules.workflows.application.nodes.rename_folder import execute_rename_folder
 from app.modules.workflows.application.nodes.transfer_helpers import apply_config_remaps_to_nodes
+from app.modules.sandbox.application.quota import check_quota
+from app.modules.workflows.domain import warning_codes
 from app.modules.workflows.domain.models import (
     ExecutionContext,
     ExecutionWarning,
@@ -152,6 +154,17 @@ def execute_workflow(
             undo()
 
     for index, node_id in enumerate(order):
+        # Between-node cancellation point: honours a user cancel or the runtime watchdog without
+        # waiting for a collision decision. ``check_cancelled`` is None for dry/synchronous runs.
+        if context.check_cancelled is not None and context.check_cancelled():
+            if not context.dry_run:
+                unwind()
+            return WorkflowExecutionResult(
+                error=CANCELLED_ERROR,
+                executed_node_ids=executed,
+                warnings=list(context.warnings),
+            )
+
         if stop_before is not None and node_id == stop_before:
             # Capture the tree state on entry to this node (after all topologically-earlier nodes
             # ran) and the scope arriving here, then halt without dispatching it or anything
@@ -235,6 +248,27 @@ def execute_workflow(
                 commit_stack.append(result.commit)
 
         _reconcile_lookup(item_by_id, context, result.produced_ids, result.removed_ids)
+
+        # Quota: only growth ops (copy fan-out, createFolder) can breach. Checked against the
+        # projected tree after each node. A dry-run warns once; a real run aborts and rolls back.
+        # Skipped when there is no sandbox (engine unit tests).
+        if context.sandbox_root:
+            quota_error = check_quota(context.items, context.root_path)
+            if quota_error:
+                if context.dry_run:
+                    if not context.quota_warned:
+                        context.quota_warned = True
+                        context.warnings.append(ExecutionWarning(
+                            node_id=node_id, code=warning_codes.QUOTA_EXCEEDED, message=quota_error,
+                        ))
+                else:
+                    unwind()
+                    return WorkflowExecutionResult(
+                        error=quota_error,
+                        failed_nodes=[FailedNode(id=node_id, error=quota_error)],
+                        executed_node_ids=executed,
+                        warnings=list(context.warnings),
+                    )
 
         # Items the node produced always flow downstream; items it removed drop out so deleted
         # items don't haunt later filters.

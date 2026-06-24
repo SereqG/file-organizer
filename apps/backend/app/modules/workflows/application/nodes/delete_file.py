@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Callable, Optional
 
 from app.modules.workflows.application.nodes.file_helpers import find_file_item_by_path
+from app.modules.workflows.application.nodes.transfer_helpers import guard_target
 from app.modules.workflows.domain.models import ExecutionContext, LogEntry, PlannedAction, WorkflowItem, WorkflowNode
 
 
@@ -48,6 +49,10 @@ def execute_delete_file(node: WorkflowNode, context: ExecutionContext, scope: se
                 context.items.append(removed)
 
     for target in targets:
+        guard_error = guard_target(context, target)
+        if guard_error:
+            restore_all()
+            return guard_error, None, None
         removed = next((i for i in context.items if i.path == target), None)
         if not context.dry_run:
             staging_dir = tempfile.mkdtemp(prefix="workflow_delete_file_")

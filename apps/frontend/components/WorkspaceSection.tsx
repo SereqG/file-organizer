@@ -2,8 +2,9 @@
 
 import { useCallback, useState } from 'react'
 import type { FileTreeNode } from '@/lib/types/explore'
-import { WorkspacePathForm } from './WorkspacePathForm'
+import { SandboxOnboarding } from './SandboxOnboarding'
 import { WorkflowEditor } from './WorkflowEditor'
+import { ProjectInfoModal } from './ProjectInfoModal'
 
 type WorkspaceState = {
   path: string
@@ -61,12 +62,11 @@ function LandingPage({
 }: {
   onNextStep: (path: string, tree: FileTreeNode, sessionId: string) => void
 }) {
-  const [validated, setValidated] = useState(false)
+  const [step, setStep] = useState<'intro' | 'setup'>('intro')
   const [formVersion, setFormVersion] = useState(0)
 
-  const handleWorkspaceValidated = useCallback(() => setValidated(true), [])
   const handleBack = useCallback(() => {
-    setValidated(false)
+    setStep('intro')
     setFormVersion(v => v + 1)
   }, [])
 
@@ -132,41 +132,36 @@ function LandingPage({
           </p>
         </div>
 
-        {/* Capabilities section — collapses when workspace is validated */}
-        <div
-          className="w-full overflow-hidden transition-all duration-700 ease-out"
-          style={{
-            maxHeight: validated ? 0 : 600,
-            opacity: validated ? 0 : 1,
-            pointerEvents: validated ? 'none' : undefined,
-          }}
-        >
-          <div className="my-10 flex items-center gap-4">
-            <div className="h-px flex-1 bg-white/[0.06]" />
-            <span className="text-xs uppercase tracking-widest text-white/20">Capabilities</span>
-            <div className="h-px flex-1 bg-white/[0.06]" />
-          </div>
+        {step === 'intro' ? (
+          <>
+            <div className="my-10 flex w-full items-center gap-4">
+              <div className="h-px flex-1 bg-white/[0.06]" />
+              <span className="text-xs uppercase tracking-widest text-white/20">Capabilities</span>
+              <div className="h-px flex-1 bg-white/[0.06]" />
+            </div>
 
-          <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {FEATURES.map(f => (
-              <FeatureCard key={f.title} title={f.title} description={f.description} />
-            ))}
-          </div>
+            <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {FEATURES.map(f => (
+                <FeatureCard key={f.title} title={f.title} description={f.description} />
+              ))}
+            </div>
 
-          <div className="my-10 flex items-center gap-4">
-            <div className="h-px flex-1 bg-white/[0.06]" />
-            <span className="text-xs uppercase tracking-widest text-white/20">Get Started</span>
-            <div className="h-px flex-1 bg-white/[0.06]" />
+            <button
+              onClick={() => setStep('setup')}
+              className="mt-12 rounded-xl bg-orange-500 px-10 py-3.5 text-sm font-semibold text-white transition-all duration-200 hover:bg-orange-400 hover:shadow-[0_0_32px_rgba(249,115,22,0.35)] cursor-pointer"
+            >
+              Get Started
+            </button>
+          </>
+        ) : (
+          <div className="mt-12 w-full">
+            <SandboxOnboarding
+              key={formVersion}
+              onNextStep={onNextStep}
+              onBack={handleBack}
+            />
           </div>
-        </div>
-
-        {/* Form */}
-        <WorkspacePathForm
-          key={formVersion}
-          onNextStep={onNextStep}
-          onWorkspaceValidated={handleWorkspaceValidated}
-          onBack={handleBack}
-        />
+        )}
       </div>
     </div>
   )

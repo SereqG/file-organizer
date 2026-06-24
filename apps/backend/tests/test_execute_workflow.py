@@ -76,7 +76,7 @@ def test_empty_branch_subtree_is_skipped(recorder):
         [edge("trigger-1", "if1"), edge("if1", "T", "true"), edge("if1", "F", "false")],
     )
 
-    result = execute_workflow(wf, ctx)
+    execute_workflow(wf, ctx)
 
     assert recorder["T"] == [{"a", "b"}]
     assert "F" not in recorder

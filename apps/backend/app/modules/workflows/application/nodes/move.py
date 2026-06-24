@@ -92,6 +92,14 @@ def execute_move(
                 staging_dir = tempfile.mkdtemp(prefix="workflow_move_")
                 shutil.move(str(dest), str(Path(staging_dir) / dest.name))
 
+        guard_error = helpers.guard_target(context, str(dest))
+        if guard_error:
+            if staging_dir is not None:
+                shutil.move(str(Path(staging_dir) / dest.name), str(dest))
+                shutil.rmtree(staging_dir, ignore_errors=True)
+            reverse()
+            return guard_error, None, None
+
         if not context.dry_run:
             try:
                 shutil.move(root, str(dest))

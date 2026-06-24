@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { LuRefreshCw } from 'react-icons/lu'
+import { LuInfo, LuRefreshCw } from 'react-icons/lu'
 import type { ConfigRemap, ExecutionFailedNode, WorkflowDefinition } from '@/lib/types/workflow'
 import { ControlButton } from './ControlButton'
 import { ViewportControls } from './ViewportControls'
@@ -16,10 +16,11 @@ interface BottomControlsProps {
   onRunComplete: (failedNodes: ExecutionFailedNode[]) => void
   onConfigRemap: (remaps: ConfigRemap[]) => void
   onReexplore: () => void
+  onShowInfo: () => void
   isExploring: boolean
 }
 
-export function BottomControls({ definition, rootPath, onRunStart, onRunComplete, onConfigRemap, onReexplore, isExploring }: BottomControlsProps) {
+export function BottomControls({ definition, rootPath, onRunStart, onRunComplete, onConfigRemap, onReexplore, onShowInfo, isExploring }: BottomControlsProps) {
   const [cooldownRemaining, setCooldownRemaining] = useState(0)
 
   useEffect(() => {
@@ -48,6 +49,9 @@ export function BottomControls({ definition, rootPath, onRunStart, onRunComplete
           disabledReason={isExploring ? 'Exploration in progress' : `Wait ${cooldownRemaining}s before re-exploring`}
         >
           <LuRefreshCw size={14} className={isExploring ? 'animate-spin' : ''} />
+        </ControlButton>
+        <ControlButton label="About & user guide" onClick={onShowInfo}>
+          <LuInfo size={14} />
         </ControlButton>
       </div>
       <RuntimeControls

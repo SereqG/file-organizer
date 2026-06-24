@@ -9,6 +9,7 @@ from app.modules.workflows.application.nodes.folder_helpers import (
     find_directory_item_by_path,
     resolve_incremental_name,
 )
+from app.modules.workflows.application.nodes.transfer_helpers import guard_target
 from app.modules.workflows.application.nodes.tree_lookup import path_exists
 from app.modules.workflows.domain.models import ExecutionContext, LogEntry, PlannedAction, WorkflowItem, WorkflowNode
 
@@ -24,6 +25,9 @@ def _make_workflow_item(path: Path) -> WorkflowItem:
 
 
 def _create_folder(path: Path, node: WorkflowNode, context: ExecutionContext) -> tuple[Optional[str], Optional[Callable], Optional[Callable]]:
+    guard_error = guard_target(context, str(path))
+    if guard_error:
+        return guard_error, None, None
     if not context.dry_run:
         try:
             os.makedirs(path)
@@ -81,6 +85,9 @@ def execute_create_folder(node: WorkflowNode, context: ExecutionContext, scope: 
         return _create_folder(new_path, node, context)
 
     if if_exists == "overwrite":
+        guard_error = guard_target(context, str(target_path))
+        if guard_error:
+            return guard_error, None, None
         if not context.dry_run:
             try:
                 shutil.rmtree(target_path)

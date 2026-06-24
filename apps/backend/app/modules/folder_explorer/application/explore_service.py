@@ -12,24 +12,30 @@ from app.modules.folder_explorer.domain.models import (
     JobStatus,
 )
 from app.modules.folder_explorer.infrastructure.traversal import traverse
-from app.modules.workspace_path.application.path_validator import validate_path
-from app.modules.workspace_path.application.session_store import get_session_path, store_session
+from app.modules.sandbox.application import session_service
+from app.modules.sandbox.application.containment import confine
 
 
 async def start_explore(
     session_id: str,
     extended_depth: bool,
-    fallback_path: Optional[str] = None,
+    root_path: Optional[str] = None,
 ) -> ExploreJob | None:
-    path = get_session_path(session_id)
-    if path is None:
-        if fallback_path is None:
+    """Explore the session's sandbox (or a confined sub-path of it). Returns ``None`` when the
+    session is unknown or the requested sub-path escapes the sandbox."""
+    sandbox_root = session_service.get_sandbox_root(session_id)
+    if sandbox_root is None:
+        return None
+
+    if root_path:
+        confined, error = confine(session_id, root_path)
+        if error is not None:
             return None
-        canonical, error = validate_path(fallback_path)
-        if error:
-            return None
-        path = canonical
-        store_session(session_id, path)
+        path = confined
+    else:
+        path = sandbox_root
+
+    session_service.touch_session(session_id)
 
     job_id = str(uuid.uuid4())
     job = job_store.create_job(job_id)

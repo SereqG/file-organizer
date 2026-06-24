@@ -102,6 +102,11 @@ class ExecutionContext:
     execution_id: UUID = field(default_factory=uuid4)
     started_at: datetime = field(default_factory=datetime.utcnow)
     root_path: str = ""
+    # The session this run belongs to and its sandbox directory. ``sandbox_root`` is the confinement
+    # boundary the write-time guard re-checks before every mutating syscall. Both are empty for
+    # engine unit tests (no sandbox), which disables the guard and the run lock.
+    session_id: str = ""
+    sandbox_root: str = ""
     items: list[WorkflowItem] = field(default_factory=list)
     logs: list[Any] = field(default_factory=list)
     outputs: dict[str, Any] = field(default_factory=dict)
@@ -120,6 +125,11 @@ class ExecutionContext:
     # Hook called by the engine before each node starts. Used to stream the active node id to
     # the polling endpoint. None for dry runs — no-op when absent.
     on_node_start: Optional[Callable[[str, str], None]] = None  # (node_id, node_name)
+    # Hook polled by the engine between nodes; returns True when the run should abort (user cancel
+    # or the runtime watchdog). None for synchronous/dry runs.
+    check_cancelled: Optional[Callable[[], bool]] = None
+    # Set once when a dry-run first predicts a quota breach, so the warning is recorded only once.
+    quota_warned: bool = False
     start_time: float = field(default_factory=time.time)
     log_entries: list[LogEntry] = field(default_factory=list)
     # Filled only when execute_workflow is called with stop_before. The tree state on entry to that
