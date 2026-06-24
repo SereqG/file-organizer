@@ -70,6 +70,12 @@ export function FolderExplorer({ sessionId, onNextStep, onBack }: Props) {
 
   return (
     <div className="mt-8">
+      <div className="mb-4 flex items-start gap-3 rounded-xl border border-yellow-500/30 bg-yellow-500/[0.08] px-5 py-4">
+        <LuCircleAlert size={16} className="mt-0.5 shrink-0 text-yellow-400" />
+        <p className="text-sm font-medium text-yellow-400 leading-relaxed">
+          This is a sandbox for testing and demo purposes only. You are not working on a real filesystem.
+        </p>
+      </div>
       <p className="mb-1 text-xs text-white/30">Select a workspace folder</p>
       <p className="mb-3 text-xs text-white/20 font-mono truncate">{effectiveSelected.path}</p>
       <WorkspaceSelectorTree
