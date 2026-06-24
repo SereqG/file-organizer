@@ -3,8 +3,6 @@ import ssl
 import httpx
 from openai import OpenAI
 
-from app.config import settings
-
 
 def _build_ssl_context() -> ssl.SSLContext:
     # ssl.create_default_context() enables VERIFY_X509_STRICT which rejects
@@ -17,10 +15,10 @@ def _build_ssl_context() -> ssl.SSLContext:
     return ctx
 
 
-def get_client() -> OpenAI:
+def get_client(api_key: str) -> OpenAI:
     http_client = httpx.Client(verify=_build_ssl_context())
     return OpenAI(
         base_url="https://openrouter.ai/api/v1",
-        api_key=settings.openrouter_api_key,
+        api_key=api_key,
         http_client=http_client,
     )

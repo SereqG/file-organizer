@@ -8,13 +8,14 @@ _VAR_DIR = _BACKEND_ROOT / "var"
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    # extra="ignore" so a leftover OPENROUTER_API_KEY in an existing .env (the key is now supplied
+    # per-user from the browser) does not crash startup.
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     app_name: str = "File Organizer"
     debug: bool = False
     host: str = "0.0.0.0"
     port: int = 8000
-    openrouter_api_key: str = ""
     openrouter_model: str = "google/gemini-2.5-flash"
 
     # --- Sandboxed demo: isolation, persistence and safety limits ---

@@ -5,6 +5,7 @@ import type { FileTreeNode } from '@/lib/types/explore'
 import { SandboxOnboarding } from './SandboxOnboarding'
 import { WorkflowEditor } from './WorkflowEditor'
 import { ProjectInfoModal } from './ProjectInfoModal'
+import { OpenRouterKeyProvider } from '@/lib/workflow/stores/openRouterKey'
 
 type WorkspaceState = {
   path: string
@@ -175,13 +176,17 @@ export function WorkspaceSection() {
   }, [])
 
   if (workspace !== null) {
+    // The provider wraps WorkflowEditor (not nested inside it) because useWorkflowSimulation runs in
+    // WorkflowEditor's body — above the providers WorkflowEditor renders internally.
     return (
-      <WorkflowEditor
-        workspacePath={workspace.path}
-        workspaceTree={workspace.tree}
-        sessionId={workspace.sessionId}
-        onTreeRefresh={handleTreeRefresh}
-      />
+      <OpenRouterKeyProvider>
+        <WorkflowEditor
+          workspacePath={workspace.path}
+          workspaceTree={workspace.tree}
+          sessionId={workspace.sessionId}
+          onTreeRefresh={handleTreeRefresh}
+        />
+      </OpenRouterKeyProvider>
     )
   }
 

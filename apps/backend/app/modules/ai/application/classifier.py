@@ -87,6 +87,7 @@ def classify_items(
     categories: list[Category],
     allow_duplicate: bool,
     on_items_classified: Optional[Callable[[list[tuple[str, Optional[str]]]], None]] = None,
+    api_key: str = "",
 ) -> tuple[Optional[str], Optional[dict[str, list[str]]]]:
     """Classify items against categories. Returns (error, result_buckets) where
     result_buckets maps category id → list of item ids, plus an ``_unclassified`` key.
@@ -154,7 +155,7 @@ def classify_items(
     if on_items_classified and clean_items:
         on_items_classified(_resolve_results(clean_items, score_map, candidates, categories, allow_duplicate))
 
-    client = get_client() if dirty_items else None
+    client = get_client(api_key) if dirty_items else None
     total_batches = -(-len(dirty_items) // _BATCH_SIZE)
     for i in range(0, len(dirty_items), _BATCH_SIZE):
         batch = dirty_items[i : i + _BATCH_SIZE]

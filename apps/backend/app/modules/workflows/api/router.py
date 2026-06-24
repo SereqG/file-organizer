@@ -83,6 +83,8 @@ class ExecuteWorkflowRequest(BaseModel):
     stopBefore: Optional[str] = None
     # run only: the token returned by the preview, used to reject a run against changed inputs.
     previewToken: Optional[str] = None
+    # The caller's OpenRouter API key (stored client-side only). Used by AI nodes; never persisted.
+    apiKey: Optional[str] = None
 
 
 # Path fields a node config may carry, by node type. Every one is containment-checked before a run.
@@ -253,6 +255,7 @@ async def execute_workflow(body: ExecuteWorkflowRequest):
     context.session_id = body.session_id
     context.sandbox_root = str(sandbox_root)
     context.root_path = str(root)
+    context.api_key = body.apiKey or ""
     context.items = scan_directory(str(root))
 
     workflow = _build_workflow(body.workflow)

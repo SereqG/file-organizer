@@ -403,6 +403,9 @@ def _route_ai_classifier(
     if not raw_categories:
         return "AI Classifier: no categories configured."
 
+    if not context.api_key.strip():
+        return "AI Classifier requires an OpenRouter API key. Add one in Run Settings."
+
     categories: list[Category] = []
     for c in raw_categories:
         try:
@@ -439,7 +442,9 @@ def _route_ai_classifier(
                 ))
 
     scoped_items = [item_by_id[item_id] for item_id in scope if item_id in item_by_id]
-    error, buckets = classify_items(scoped_items, categories, allow_duplicate, on_items_classified)
+    error, buckets = classify_items(
+        scoped_items, categories, allow_duplicate, on_items_classified, api_key=context.api_key
+    )
 
     if error:
         return error

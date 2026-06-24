@@ -13,6 +13,7 @@ import { useWorkflowExecution } from '@/hooks/useWorkflowExecution'
 import { useWorkflowRun } from '@/lib/contexts/WorkflowRunContext'
 import type { WorkflowPreview } from '@/lib/types/workflow'
 import { resolveRunNodes } from '@/lib/workflow/resolveRunNodes'
+import { useOpenRouterKey } from '@/lib/workflow/stores/openRouterKey'
 
 const DRY_RUN_ONLY_KEY = 'workflow:dryRunOnly'
 
@@ -29,6 +30,7 @@ async function previewWorkflow(
   definition: WorkflowDefinition,
   rootPath: string,
   resolvedNodes: WorkflowNode[],
+  apiKey?: string,
 ): Promise<WorkflowPreview> {
   const res = await fetch('/api/workflows/execute', {
     method: 'POST',
@@ -37,6 +39,7 @@ async function previewWorkflow(
       workflow: { nodes: resolvedNodes, edges: definition.edges, trigger: definition.trigger },
       rootPath,
       mode: 'dryRun',
+      ...(apiKey ? { apiKey } : {}),
     }),
   })
   const data = await res.json()
@@ -66,6 +69,14 @@ export function RuntimeControls({ definition, rootPath, onRunStart, onRunComplet
   })
   const execution = useWorkflowExecution()
   const { setRunState } = useWorkflowRun()
+  const { apiKey, isAiAvailable } = useOpenRouterKey()
+
+  // Send the key only when it is active and the workflow actually uses an AI node, so the secret
+  // never rides on deterministic runs.
+  function apiKeyForRun(def: WorkflowDefinition): string | undefined {
+    if (!isAiAvailable) return undefined
+    return def.nodes.some((n) => n.type === 'ai_classifier') ? apiKey : undefined
+  }
 
   function handleToggleDryRunOnly(value: boolean) {
     setIsDryRunOnly(value)
@@ -113,7 +124,7 @@ export function RuntimeControls({ definition, rootPath, onRunStart, onRunComplet
     setIsPreviewing(true)
 
     try {
-      const result = await previewWorkflow(definition, rootPath, resolvedNodes)
+      const result = await previewWorkflow(definition, rootPath, resolvedNodes, apiKeyForRun(definition))
       setPreview(result)
       setPendingResolvedNodes(resolvedNodes)
     } finally {
@@ -126,7 +137,7 @@ export function RuntimeControls({ definition, rootPath, onRunStart, onRunComplet
     const token = preview?.previewToken
     setPreview(null)
     const resolvedDefinition = { ...definition, nodes: pendingResolvedNodes }
-    void execution.start(resolvedDefinition, rootPath, token)
+    void execution.start(resolvedDefinition, rootPath, token, apiKeyForRun(resolvedDefinition))
     setPendingResolvedNodes(null)
   }
 
