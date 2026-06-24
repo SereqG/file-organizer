@@ -107,6 +107,9 @@ class ExecutionContext:
     # engine unit tests (no sandbox), which disables the guard and the run lock.
     session_id: str = ""
     sandbox_root: str = ""
+    # The caller's OpenRouter API key, used only by AI nodes. Empty when the user has not supplied
+    # one — AI Classifier nodes reject the run in that case (the editor disables them without a key).
+    api_key: str = ""
     items: list[WorkflowItem] = field(default_factory=list)
     logs: list[Any] = field(default_factory=list)
     outputs: dict[str, Any] = field(default_factory=dict)

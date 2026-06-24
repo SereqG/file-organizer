@@ -170,7 +170,7 @@ export function useWorkflowExecution() {
 
   useEffect(() => clearTimer, [clearTimer])
 
-  const start = useCallback(async (definition: WorkflowDefinition, rootPath: string, previewToken?: string) => {
+  const start = useCallback(async (definition: WorkflowDefinition, rootPath: string, previewToken?: string, apiKey?: string) => {
     clearTimer()
     attemptRef.current = 0
     startedAtRef.current = Date.now()
@@ -187,6 +187,7 @@ export function useWorkflowExecution() {
           rootPath,
           mode: 'run',
           previewToken,
+          ...(apiKey ? { apiKey } : {}),
         }),
       })
     } catch {

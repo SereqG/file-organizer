@@ -6,8 +6,8 @@ services:
   backend:
     build: ./apps/backend
     environment:
-      # AI Classifier node (optional). Leave empty to run deterministic workflows only.
-      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      # AI Classifier node: the OpenRouter API key is supplied per-user from the browser, never here.
+      # Only the model is configurable server-side.
       OPENROUTER_MODEL: ${OPENROUTER_MODEL:-google/gemini-2.5-flash}
     volumes:
       # Per-session sandboxes + the SQLite database (sessions / saved workflows / run history).

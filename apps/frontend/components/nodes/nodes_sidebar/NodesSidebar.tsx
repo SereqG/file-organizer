@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import type { NodeDescriptor } from '@/lib/types/workflowNodeDescriptor'
 import { NODE_CATEGORIES } from '@/lib/workflow/registry/nodeCatalog'
+import { useOpenRouterKey } from '@/lib/workflow/stores/openRouterKey'
 import { CategorySection } from './CategorySection'
 
 interface NodesSidebarProps {
@@ -12,6 +13,7 @@ interface NodesSidebarProps {
 
 export function NodesSidebar({ onAddNode, triggerDisabled }: NodesSidebarProps) {
   const [expanded, setExpanded] = useState(true)
+  const { isAiAvailable } = useOpenRouterKey()
 
   return (
     <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10 flex flex-col rounded-lg border border-white/10 bg-[#111] overflow-hidden">
@@ -40,6 +42,7 @@ export function NodesSidebar({ onAddNode, triggerDisabled }: NodesSidebarProps) 
               key={category.name}
               {...category}
               disabled={category.name === 'Triggers' ? triggerDisabled : false}
+              isAiAvailable={isAiAvailable}
               onAddNode={onAddNode}
             />
           ))}

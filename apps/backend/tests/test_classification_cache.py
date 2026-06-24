@@ -37,7 +37,7 @@ def calls(monkeypatch):
         return None, scores
 
     monkeypatch.setattr(classifier, "_classify_batch", fake_classify_batch)
-    monkeypatch.setattr(classifier, "get_client", lambda: object())
+    monkeypatch.setattr(classifier, "get_client", lambda *_a, **_k: object())
     return recorded
 
 

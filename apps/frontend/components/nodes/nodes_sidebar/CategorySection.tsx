@@ -8,10 +8,11 @@ import { NodeItem } from './NodeItem'
 
 interface CategorySectionProps extends NodeCategory {
   disabled?: boolean
+  isAiAvailable?: boolean
   onAddNode: (entry: NodeDescriptor) => void
 }
 
-export function CategorySection({ name, nodes, disabled, onAddNode }: CategorySectionProps) {
+export function CategorySection({ name, nodes, disabled, isAiAvailable, onAddNode }: CategorySectionProps) {
   const [open, setOpen] = useState(true)
 
   return (
@@ -27,7 +28,7 @@ export function CategorySection({ name, nodes, disabled, onAddNode }: CategorySe
       {open && (
         <div className="mt-0.5 flex flex-col gap-0.5 px-1">
           {nodes.map((node) => (
-            <NodeItem key={node.label} {...node} disabled={disabled} onAddNode={onAddNode} />
+            <NodeItem key={node.label} {...node} disabled={disabled} isAiAvailable={isAiAvailable} onAddNode={onAddNode} />
           ))}
         </div>
       )}

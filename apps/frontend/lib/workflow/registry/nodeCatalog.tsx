@@ -8,6 +8,10 @@ export interface NodeEntry {
   triggerId?: string
   label: string
   icon: React.ReactNode
+  // Disabled in the sidebar until the user supplies an active OpenRouter API key.
+  requiresApiKey?: boolean
+  // Renders a gradient pill next to the label (e.g. 'ai' → blue→violet "AI" badge).
+  badge?: 'ai'
 }
 
 export interface NodeCategory {
@@ -122,6 +126,8 @@ export const NODE_CATEGORIES: NodeCategory[] = [
         nodeType: 'ai_classifier',
         label: 'AI Classifier',
         icon: <LuTags size={14} />,
+        requiresApiKey: true,
+        badge: 'ai',
       },
     ],
   },
