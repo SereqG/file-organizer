@@ -14,6 +14,9 @@ from app.modules.folder_explorer.domain.models import (
 from app.modules.folder_explorer.infrastructure.traversal import traverse
 from app.modules.sandbox.application import session_service
 from app.modules.sandbox.application.containment import confine
+from app.shared.logger import get_logger
+
+_logger = get_logger("folder_explorer")
 
 
 async def start_explore(
@@ -38,7 +41,7 @@ async def start_explore(
     session_service.touch_session(session_id)
 
     job_id = str(uuid.uuid4())
-    job = job_store.create_job(job_id)
+    job = job_store.create_job(job_id, session_id)
     effective_depth = depth_confirmation.resolve_effective_depth(extended_depth)
 
     asyncio.create_task(_run_traversal(job_id, path, effective_depth, extended_depth))
@@ -74,7 +77,9 @@ async def _run_traversal(
                 "tree": tree,
             }))
     except Exception as exc:
+        # Log the detail server-side; the client only sees a generic message (no server paths).
+        _logger.warning("Directory scan failed for job %s: %s", job_id, exc)
         job_store.update_job(job.model_copy(update={
             "status": JobStatus.FAILED,
-            "error": str(exc),
+            "error": "Directory scan failed.",
         }))

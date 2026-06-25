@@ -147,6 +147,29 @@ def test_definitions_api_rejects_unknown_session(client):
     assert res.json()["code"] == "SESSION_NOT_FOUND"
 
 
+def test_definition_rejected_when_too_large(client, monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "max_definition_bytes", 50)
+    session = _make_session()
+    big = {**_DEFINITION, "nodes": [{"id": "x" * 200}]}
+    res = client.post("/workflows/api/definitions", json={"session_id": session, "name": "big", "definition": big})
+    assert res.status_code == 400
+    assert res.json()["code"] == "DEFINITION_TOO_LARGE"
+
+
+def test_definition_count_capped_per_session(client, monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "max_definitions_per_session", 1)
+    session = _make_session()
+    first = client.post("/workflows/api/definitions", json={"session_id": session, "name": "a", "definition": _DEFINITION})
+    assert first.status_code == 200
+    second = client.post("/workflows/api/definitions", json={"session_id": session, "name": "b", "definition": _DEFINITION})
+    assert second.status_code == 409
+    assert second.json()["code"] == "DEFINITION_LIMIT"
+
+
 def test_runs_api_lists_history(client, tmp_path):
     session = _make_session()
     log = tmp_path / "execution-run9.log"

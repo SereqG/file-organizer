@@ -380,7 +380,10 @@ def _classify_batch(
         msg = str(exc)
         if "token" in msg.lower() or "context" in msg.lower() or "length" in msg.lower():
             return "Classification failed: token limit reached. Changes will be rolled back.", []
-        return f"AI classification failed: {msg}", []
+        # Log the provider's raw error server-side; return a generic message so upstream detail
+        # (URLs, request fragments) is not leaked to the client.
+        _logger.warning("AI classification call failed: %s", msg)
+        return "AI classification failed. Please try again.", []
 
     choice = response.choices[0]
     if choice.finish_reason == "length":
@@ -398,7 +401,8 @@ def _classify_batch(
             for s in data.get("scores", [])
         ]
     except (json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
-        return f"AI returned unexpected response format: {exc}", []
+        _logger.warning("AI returned unparseable response: %s", exc)
+        return "AI returned an unexpected response format.", []
 
     return None, scores
 

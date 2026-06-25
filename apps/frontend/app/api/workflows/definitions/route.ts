@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { BACKEND_URL, getSessionId } from '@/lib/server/session'
+import { BACKEND_URL, backendHeaders, getSessionId } from '@/lib/server/session'
 
 function noSession(): NextResponse {
   return NextResponse.json(
@@ -14,7 +14,9 @@ export async function GET(): Promise<NextResponse> {
   if (!sessionId) return noSession()
 
   try {
-    const res = await fetch(`${BACKEND_URL}/workflows/api/definitions?session_id=${sessionId}`)
+    const res = await fetch(`${BACKEND_URL}/workflows/api/definitions?session_id=${sessionId}`, {
+      headers: await backendHeaders(),
+    })
     const data = await res.json().catch(() => ({}))
     return NextResponse.json(data, { status: res.status })
   } catch {
@@ -37,7 +39,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   try {
     const res = await fetch(`${BACKEND_URL}/workflows/api/definitions`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await backendHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ ...(body as Record<string, unknown>), session_id: sessionId }),
     })
     const data = await res.json().catch(() => ({}))

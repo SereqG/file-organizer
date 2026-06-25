@@ -22,6 +22,14 @@ _TEMPLATE_DIR = Path(__file__).resolve().parents[4] / "sandbox_template"
 _EMPTY_FOLDERS = ("Documents", "Photos", "Invoices")
 
 
+class SandboxCapacityError(Exception):
+    """Raised when the global live-sandbox cap is reached, so no new sandbox may be provisioned.
+
+    Rejecting the newcomer (rather than evicting a live session to make room) keeps a flood from
+    pushing real visitors out; the TTL sweep frees capacity as idle sandboxes expire.
+    """
+
+
 @dataclass(frozen=True)
 class Session:
     id: str
@@ -39,8 +47,20 @@ def _row_to_session(row) -> Session:
     )
 
 
+def _live_session_count() -> int:
+    with db.connection() as conn:
+        return conn.execute("SELECT COUNT(*) AS n FROM sessions").fetchone()["n"]
+
+
 def create_session() -> Session:
-    """Provision a new session: a fresh sandbox dir seeded from the template, plus a DB row."""
+    """Provision a new session: a fresh sandbox dir seeded from the template, plus a DB row.
+
+    Enforces the global cap *before* doing any filesystem work, so a creation flood cannot exceed
+    ``max_sessions`` between cleanup sweeps. Raises ``SandboxCapacityError`` when full.
+    """
+    if _live_session_count() >= settings.max_sessions:
+        raise SandboxCapacityError()
+
     session_id = uuid.uuid4().hex
     sandbox_path = Path(settings.sandbox_root) / session_id
     sandbox_path.parent.mkdir(parents=True, exist_ok=True)
@@ -82,12 +102,29 @@ def touch_session(session_id: str) -> None:
 
 
 def delete_session(session_id: str) -> None:
-    """Remove a session: its sandbox directory and all of its DB rows (workflows/runs cascade)."""
+    """Remove a session: its sandbox directory, its run log files, and all of its DB rows.
+
+    Run rows cascade with the session, but the ``logs/execution-*.log`` files they reference live
+    outside the sandbox tree, so they must be unlinked explicitly or they leak forever.
+    """
     session = get_session(session_id)
     if session is not None:
         shutil.rmtree(session.sandbox_path, ignore_errors=True)
     with db.connection() as conn:
+        # Read the log paths before deleting the session row (the runs cascade would drop them).
+        log_paths = [
+            row["log_path"]
+            for row in conn.execute(
+                "SELECT log_path FROM runs WHERE session_id = ? AND log_path IS NOT NULL",
+                (session_id,),
+            ).fetchall()
+        ]
         conn.execute("DELETE FROM sessions WHERE id = ?", (session_id,))
+    for log_path in log_paths:
+        try:
+            Path(log_path).unlink(missing_ok=True)
+        except OSError:
+            pass  # a stuck log file must not block reclaiming the session.
 
 
 def list_sessions() -> list[Session]:

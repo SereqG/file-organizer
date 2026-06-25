@@ -1,12 +1,13 @@
 from typing import Optional
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from app.modules.folder_explorer.application import job_store
 from app.modules.folder_explorer.application.explore_service import start_explore
 from app.modules.folder_explorer.domain.models import ExploreJob
+from app.shared.ownership import session_owner_guard
 
 router = APIRouter(prefix="/folder_explorer/api", tags=["folder_explorer"])
 
@@ -35,7 +36,7 @@ async def post_explore(body: ExploreRequest):
 
 
 @router.get("/explore/{job_id}", response_model=ExploreJob)
-def get_explore(job_id: str):
+def get_explore(job_id: str, request: Request):
     job = job_store.get_job(job_id)
 
     if job is None:
@@ -43,5 +44,7 @@ def get_explore(job_id: str):
             status_code=404,
             content={"code": "JOB_NOT_FOUND", "message": "Job ID not found."},
         )
+    if (denied := session_owner_guard(request, job.session_id)) is not None:
+        return denied
 
     return job

@@ -130,6 +130,21 @@ def test_clear_empties_cache(calls):
     assert len(calls) == 2  # cache was emptied, full re-classify
 
 
+def test_cache_evicts_least_recently_used(monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "classification_cache_max_entries", 2)
+    classification_cache.put("m", "fp1", "c", 0.1)
+    classification_cache.put("m", "fp2", "c", 0.2)
+    assert classification_cache.get("m", "fp1", "c") == 0.1  # touch fp1 → fp2 is now LRU
+
+    classification_cache.put("m", "fp3", "c", 0.3)  # over cap → evicts fp2
+
+    assert classification_cache.get("m", "fp2", "c") is None
+    assert classification_cache.get("m", "fp1", "c") == 0.1
+    assert classification_cache.get("m", "fp3", "c") == 0.3
+
+
 def test_callback_fires_once_per_item_including_cache_hits(calls):
     classifier.classify_items(items_3(), cats_2(), allow_duplicate=False)
 

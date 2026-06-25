@@ -39,6 +39,9 @@ def connection() -> Iterator[sqlite3.Connection]:
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
+    # Wait (rather than immediately raising "database is locked") when a concurrent writer holds the
+    # lock — matters under a creation/cleanup flood. The value is a trusted int, not user input.
+    conn.execute(f"PRAGMA busy_timeout={settings.sqlite_busy_timeout_ms}")
     try:
         yield conn
         conn.commit()

@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8000
     openrouter_model: str = "google/gemini-2.5-flash"
+    # Shared secret the Next proxy must present (X-Internal-Secret) so a direct hit on the
+    # internal-only backend is rejected. Empty disables the check (local dev without a proxy).
+    internal_api_secret: str = ""
 
     # --- Sandboxed demo: isolation, persistence and safety limits ---
     # Root directory holding one throwaway sandbox per session (gitignored).
@@ -37,7 +40,19 @@ class Settings(BaseSettings):
     # How often the cleanup task sweeps expired sandboxes.
     cleanup_interval_seconds: int = 300
     # Global cap on live sandboxes; the oldest beyond this are reclaimed even if not yet expired.
+    # Also enforced at creation time (reject newcomers when full) so a flood cannot exceed it
+    # between sweeps.
     max_sessions: int = 500
+    # Best-effort per-client throttle on session creation (slowapi syntax). The hard max_sessions
+    # cap is the deterministic backstop; this only slows the flood.
+    session_create_rate_limit: str = "10/minute"
+    # Per-session caps on saved workflows so a visitor cannot grow the DB without bound.
+    max_definition_bytes: int = 256 * 1024
+    max_definitions_per_session: int = 50
+    # Upper bound on the in-memory AI score cache (LRU eviction beyond this).
+    classification_cache_max_entries: int = 10_000
+    # How long a SQLite writer waits for a lock before erroring, instead of failing immediately.
+    sqlite_busy_timeout_ms: int = 5000
 
 
 settings = Settings()

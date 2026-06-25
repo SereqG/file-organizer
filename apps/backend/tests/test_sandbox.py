@@ -252,6 +252,44 @@ def test_single_active_run_per_session():
     assert execution_store.has_active_session_run("s1") is False
 
 
+# --- IDOR: ownership checks on by-id endpoints (M1) -------------------------
+
+
+def test_execution_status_requires_owning_session(client):
+    ctx = ExecutionContext()
+    ctx.session_id = "owner-sess"
+    execution_store.create("exec-own", ctx)
+
+    assert client.get("/workflows/api/execute/exec-own").status_code == 404
+    assert client.get("/workflows/api/execute/exec-own", headers={"X-Session-Id": "intruder"}).status_code == 404
+    owned = client.get("/workflows/api/execute/exec-own", headers={"X-Session-Id": "owner-sess"})
+    assert owned.status_code == 200
+
+
+def test_explore_job_requires_owning_session(client):
+    from app.modules.folder_explorer.application import job_store
+
+    job_store.create_job("job-own", "owner-sess")
+
+    assert client.get("/folder_explorer/api/explore/job-own").status_code == 404
+    assert client.get("/folder_explorer/api/explore/job-own", headers={"X-Session-Id": "intruder"}).status_code == 404
+    owned = client.get("/folder_explorer/api/explore/job-own", headers={"X-Session-Id": "owner-sess"})
+    assert owned.status_code == 200
+    assert "session_id" not in owned.json()  # owner field never serialized to the client
+
+
+# --- shared secret middleware (H2) -----------------------------------------
+
+
+def test_internal_secret_enforced_when_configured(client, monkeypatch):
+    monkeypatch.setattr(settings, "internal_api_secret", "topsecret")
+
+    assert client.get("/workflows/api/health").status_code == 200  # exempt: docker healthcheck
+    assert client.get("/workflows/api/runs?session_id=x").status_code == 401  # no header → blocked
+    passed = client.get("/workflows/api/runs?session_id=x", headers={"X-Internal-Secret": "topsecret"})
+    assert passed.status_code != 401  # header accepted; handler then runs (404 unknown session)
+
+
 # --- node-count limit via the API (Stage 2) --------------------------------
 
 
@@ -280,6 +318,29 @@ def test_execute_rejects_too_many_nodes(client, tmp_path, make_session, monkeypa
     assert res.json()["code"] == "TOO_MANY_NODES"
 
 
+def test_execute_rejects_unsafe_name_field(client, tmp_path, make_session):
+    sandbox = tmp_path / "sb"
+    sandbox.mkdir()
+    session = make_session(sandbox)
+
+    body = {
+        "workflow": {
+            "nodes": [{
+                "id": "cf", "type": "createFolder", "category": "general", "name": "cf", "version": 1,
+                "config": {"folderName": "../../etc/evil", "parentFolderPath": str(sandbox), "ifExists": "fail"},
+            }],
+            "edges": [{"id": "t->cf", "source": "trigger-1", "target": "cf", "sourceHandle": None}],
+            "trigger": {"id": "trigger-1", "type": "manual_trigger", "category": "trigger", "name": "t", "version": 1, "config": {}},
+        },
+        "session_id": session,
+        "rootPath": str(sandbox),
+        "mode": "dryRun",
+    }
+    res = client.post("/workflows/api/execute", json=body)
+    assert res.status_code == 400
+    assert res.json()["code"] == "PATH_OUTSIDE_SANDBOX"
+
+
 # --- cleanup (Stage 2) -----------------------------------------------------
 
 
@@ -300,13 +361,37 @@ def test_cleanup_removes_expired_sandbox(monkeypatch):
 
 def test_cleanup_enforces_global_cap(monkeypatch):
     monkeypatch.setattr(settings, "session_ttl_seconds", 10_000)  # nothing expires by age
-    monkeypatch.setattr(settings, "max_sessions", 1)
     first = session_service.create_session()
     time.sleep(0.01)
     second = session_service.create_session()
 
+    monkeypatch.setattr(settings, "max_sessions", 1)  # tighten the cap once both exist
     cleanup.cleanup_once()
 
     # Oldest beyond the cap is reclaimed; the most recent survives.
     assert session_service.get_session(first.id) is None
     assert session_service.get_session(second.id) is not None
+
+
+def test_create_session_rejects_at_capacity(monkeypatch):
+    monkeypatch.setattr(settings, "max_sessions", 1)
+    session_service.create_session()
+
+    import pytest
+
+    with pytest.raises(session_service.SandboxCapacityError):
+        session_service.create_session()
+
+
+def test_delete_session_removes_run_logs(tmp_path):
+    from app.modules.workflows.application import run_store
+
+    session = session_service.create_session()
+    log = tmp_path / "execution-del.log"
+    log.write_text("body", encoding="utf-8")
+    run_store.record_start("del", session.id, str(log))
+
+    session_service.delete_session(session.id)
+
+    assert not log.exists()  # the referenced log file is reclaimed, not just the DB row
+    assert session_service.get_session(session.id) is None

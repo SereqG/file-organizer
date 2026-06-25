@@ -37,11 +37,10 @@ import { ProjectInfoModal } from './ProjectInfoModal'
 interface WorkflowEditorProps {
   workspacePath: string
   workspaceTree: FileTreeNode
-  sessionId: string
   onTreeRefresh: (tree: FileTreeNode) => void
 }
 
-export function WorkflowEditor({ workspacePath, workspaceTree, sessionId, onTreeRefresh }: WorkflowEditorProps) {
+export function WorkflowEditor({ workspacePath, workspaceTree, onTreeRefresh }: WorkflowEditorProps) {
   const [runState, setRunStateRaw] = useState<WorkflowRunState>({ isRunning: false, currentNodeId: null, logEntries: [] })
   const [hasRun, setHasRun] = useState(false)
   const [logsPanelOpen, setLogsPanelOpen] = useState(false)
@@ -58,7 +57,7 @@ export function WorkflowEditor({ workspacePath, workspaceTree, sessionId, onTree
 
   const runContextValue = { ...runState, hasRun, setRunState }
 
-  const { state: exploreState, startExplore, acceptPartialTree } = useExploreJob(sessionId, { autoStart: false, rootPath: workspacePath })
+  const { state: exploreState, startExplore, acceptPartialTree } = useExploreJob({ autoStart: false, rootPath: workspacePath })
 
   const isExploring = exploreState.phase === 'loading' || exploreState.phase === 'awaiting_confirmation'
 

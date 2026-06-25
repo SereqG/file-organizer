@@ -1,10 +1,7 @@
-import { cookies } from 'next/headers'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
+import { BACKEND_URL, backendHeaders, getSessionId } from '@/lib/server/session'
 
-const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:8000'
-const SESSION_COOKIE = 'session_id'
-
-export async function POST(request: NextRequest): Promise<NextResponse> {
+export async function POST(request: Request): Promise<NextResponse> {
   let body: unknown
   try {
     body = await request.json()
@@ -13,7 +10,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   // The session is server-trusted: read it from the httpOnly cookie, never from the client body.
-  const sessionId = (await cookies()).get(SESSION_COOKIE)?.value
+  const sessionId = await getSessionId()
   if (!sessionId) {
     return NextResponse.json(
       { message: 'No sandbox session. Reload the page to start one.', code: 'NO_SESSION' },
@@ -27,7 +24,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     response = await fetch(`${BACKEND_URL}/workflows/api/execute`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await backendHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload),
     })
   } catch {

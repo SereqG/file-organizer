@@ -9,6 +9,9 @@ services:
       # AI Classifier node: the OpenRouter API key is supplied per-user from the browser, never here.
       # Only the model is configurable server-side.
       OPENROUTER_MODEL: ${OPENROUTER_MODEL:-google/gemini-2.5-flash}
+      # Shared secret the frontend proxy must present on every backend call (defense-in-depth, so a
+      # direct hit on the internal-only backend is rejected). Must match the frontend's value.
+      INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:?set INTERNAL_API_SECRET in .env}
     volumes:
       # Per-session sandboxes + the SQLite database (sessions / saved workflows / run history).
       - sandbox-data:/app/var
@@ -29,6 +32,8 @@ services:
     environment:
       # Server-side base URL the Next route handlers proxy to (internal network DNS name).
       BACKEND_URL: http://backend:8000
+      # Same shared secret the proxy attaches to every backend call (see backend service above).
+      INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:?set INTERNAL_API_SECRET in .env}
     ports:
       - "3000:3000"
     depends_on:

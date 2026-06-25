@@ -1,4 +1,4 @@
-const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:8000'
+import { BACKEND_URL, backendHeaders } from '@/lib/server/session'
 
 export async function GET(
   _req: Request,
@@ -10,6 +10,7 @@ export async function GET(
   try {
     backendRes = await fetch(`${BACKEND_URL}/workflows/api/execute/${executionId}/logs`, {
       cache: 'no-store',
+      headers: await backendHeaders(),
     })
   } catch {
     return new Response('Backend unavailable', { status: 503 })

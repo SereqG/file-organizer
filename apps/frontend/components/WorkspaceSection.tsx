@@ -10,7 +10,6 @@ import { OpenRouterKeyProvider } from '@/lib/workflow/stores/openRouterKey'
 type WorkspaceState = {
   path: string
   tree: FileTreeNode
-  sessionId: string
 } | null
 
 const FEATURES = [
@@ -61,7 +60,7 @@ function FeatureCard({ title, description }: { title: string; description: strin
 function LandingPage({
   onNextStep,
 }: {
-  onNextStep: (path: string, tree: FileTreeNode, sessionId: string) => void
+  onNextStep: (path: string, tree: FileTreeNode) => void
 }) {
   const [step, setStep] = useState<'intro' | 'setup'>('intro')
   const [formVersion, setFormVersion] = useState(0)
@@ -183,7 +182,6 @@ export function WorkspaceSection() {
         <WorkflowEditor
           workspacePath={workspace.path}
           workspaceTree={workspace.tree}
-          sessionId={workspace.sessionId}
           onTreeRefresh={handleTreeRefresh}
         />
       </OpenRouterKeyProvider>
@@ -192,7 +190,7 @@ export function WorkspaceSection() {
 
   return (
     <LandingPage
-      onNextStep={(path, tree, sessionId) => setWorkspace({ path, tree, sessionId })}
+      onNextStep={(path, tree) => setWorkspace({ path, tree })}
     />
   )
 }

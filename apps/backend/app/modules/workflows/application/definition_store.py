@@ -48,6 +48,14 @@ def save_definition(session_id: str, name: str, definition: dict) -> str:
     return workflow_id
 
 
+def count_definitions(session_id: str) -> int:
+    with db.connection() as conn:
+        return conn.execute(
+            "SELECT COUNT(*) AS n FROM workflows WHERE session_id = ?",
+            (session_id,),
+        ).fetchone()["n"]
+
+
 def list_definitions(session_id: str) -> list[WorkflowSummary]:
     with db.connection() as conn:
         rows = conn.execute(

@@ -7,11 +7,14 @@ the execution endpoints so each file stays focused. Every request is scoped to a
 
 from __future__ import annotations
 
+import json
+
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from typing import Any
+from typing import Any, Optional
 
+from app.config import settings
 from app.modules.sandbox.application import session_service
 from app.modules.workflows.application import definition_store, run_store
 
@@ -29,6 +32,16 @@ def _no_session() -> JSONResponse:
     )
 
 
+def _too_large(definition: dict[str, Any]) -> Optional[JSONResponse]:
+    """Reject oversized definitions so a visitor cannot push large blobs into the DB."""
+    if len(json.dumps(definition)) > settings.max_definition_bytes:
+        return JSONResponse(
+            status_code=400,
+            content={"code": "DEFINITION_TOO_LARGE", "message": "This workflow is too large to save."},
+        )
+    return None
+
+
 # --- saved workflows -------------------------------------------------------
 
 
@@ -42,6 +55,13 @@ class SaveDefinitionRequest(BaseModel):
 def create_definition(body: SaveDefinitionRequest):
     if _session_missing(body.session_id):
         return _no_session()
+    if (oversized := _too_large(body.definition)) is not None:
+        return oversized
+    if definition_store.count_definitions(body.session_id) >= settings.max_definitions_per_session:
+        return JSONResponse(
+            status_code=409,
+            content={"code": "DEFINITION_LIMIT", "message": "Saved-workflow limit reached for this session."},
+        )
     workflow_id = definition_store.save_definition(body.session_id, body.name, body.definition)
     return {"id": workflow_id}
 
@@ -79,6 +99,8 @@ def get_definition(workflow_id: str, session_id: str):
 def update_definition(workflow_id: str, body: SaveDefinitionRequest):
     if _session_missing(body.session_id):
         return _no_session()
+    if (oversized := _too_large(body.definition)) is not None:
+        return oversized
     if not definition_store.update_definition(body.session_id, workflow_id, body.name, body.definition):
         return JSONResponse(status_code=404, content={"code": "NOT_FOUND", "message": "Workflow not found."})
     return {"id": workflow_id}
