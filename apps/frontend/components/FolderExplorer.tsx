@@ -11,13 +11,12 @@ import { WorkspaceSelectorTree } from './WorkspaceSelectorTree'
 const SLOW_SCAN_THRESHOLD_S = 8
 
 interface Props {
-  sessionId: string
-  onNextStep: (path: string, tree: FileTreeNode, sessionId: string) => void
+  onNextStep: (path: string, tree: FileTreeNode) => void
   onBack?: () => void
 }
 
-export function FolderExplorer({ sessionId, onNextStep, onBack }: Props) {
-  const { state, elapsedSeconds, startExplore, acceptPartialTree, cancelScan } = useExploreJob(sessionId)
+export function FolderExplorer({ onNextStep, onBack }: Props) {
+  const { state, elapsedSeconds, startExplore, acceptPartialTree, cancelScan } = useExploreJob()
   const [selectedNode, setSelectedNode] = useState<FileTreeNode | null>(null)
 
   if (state.phase === 'idle' || state.phase === 'loading') {
@@ -98,7 +97,7 @@ export function FolderExplorer({ sessionId, onNextStep, onBack }: Props) {
           </button>
         )}
         <button
-          onClick={() => onNextStep(effectiveSelected.path, effectiveSelected, sessionId)}
+          onClick={() => onNextStep(effectiveSelected.path, effectiveSelected)}
           className="
             flex-1 rounded-xl px-5 py-3.5 text-sm font-medium
             bg-orange-500/10 border border-orange-500/20 text-orange-400

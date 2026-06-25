@@ -208,6 +208,14 @@ and sent with runs that use AI nodes — never written to the server.
 Builds both images and serves the app on **<http://localhost:3000>**. Only the frontend port is
 published; the backend stays on the internal network.
 
+A shared secret authenticates the frontend→backend proxy (so a direct hit on the internal-only
+backend is rejected). Set it in a repo-root `.env` before starting — compose will refuse to start
+without it:
+
+```bash
+echo "INTERNAL_API_SECRET=$(openssl rand -hex 32)" >> .env
+```
+
 ```bash
 docker compose up -d --build    # build & start
 docker compose logs -f          # follow logs
@@ -246,6 +254,11 @@ Backend settings are read from `apps/backend/.env` (see `.env.example`). All hav
 | `MAX_WORKFLOW_NODES` | `100` | Maximum nodes per workflow. |
 | `MAX_RUNTIME_SECONDS` | `30` | Wall-clock cap on a single run's active execution. |
 | `CLEANUP_INTERVAL_SECONDS` | `300` | How often expired sandboxes are swept. |
+| `MAX_SESSIONS` | `500` | Global cap on live sandboxes (enforced at creation). |
+| `SESSION_CREATE_RATE_LIMIT` | `10/minute` | Per-client throttle on session creation. |
+| `MAX_DEFINITION_BYTES` | `262144` (256 KB) | Max size of a saved workflow. |
+| `MAX_DEFINITIONS_PER_SESSION` | `50` | Max saved workflows per session. |
+| `INTERNAL_API_SECRET` | _(empty)_ | Shared secret required from the proxy; empty disables the check (local dev). **Required under Docker.** |
 
 > 🔑 The **OpenRouter API key is intentionally not an environment variable** — it is supplied
 > per-user from the browser so the hosted demo never holds anyone's key.

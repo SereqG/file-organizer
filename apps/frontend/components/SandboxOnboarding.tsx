@@ -6,14 +6,14 @@ import type { FileTreeNode } from '@/lib/types/explore'
 import { FolderExplorer } from './FolderExplorer'
 
 interface SandboxOnboardingProps {
-  onNextStep: (path: string, tree: FileTreeNode, sessionId: string) => void
+  onNextStep: (path: string, tree: FileTreeNode) => void
   onWorkspaceValidated?: () => void
   onBack?: () => void
 }
 
 type State =
   | { phase: 'creating' }
-  | { phase: 'ready'; sessionId: string }
+  | { phase: 'ready' }
   | { phase: 'error' }
 
 /**
@@ -29,8 +29,9 @@ export function SandboxOnboarding({ onNextStep, onWorkspaceValidated, onBack }: 
     try {
       const res = await fetch('/api/sandbox/session', { method: 'POST' })
       if (!res.ok) throw new Error('failed')
-      const data = await res.json()
-      setState({ phase: 'ready', sessionId: data.sessionId })
+      // The session id is intentionally not returned in the body; it lives only in the httpOnly
+      // cookie and is attached to backend calls server-side by the proxies.
+      setState({ phase: 'ready' })
       onWorkspaceValidated?.()
     } catch {
       setState({ phase: 'error' })
@@ -80,7 +81,7 @@ export function SandboxOnboarding({ onNextStep, onWorkspaceValidated, onBack }: 
 
   return (
     <div className="animate-fade-slide-in">
-      <FolderExplorer sessionId={state.sessionId} onNextStep={onNextStep} onBack={onBack} />
+      <FolderExplorer onNextStep={onNextStep} onBack={onBack} />
     </div>
   )
 }

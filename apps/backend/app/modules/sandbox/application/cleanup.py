@@ -36,7 +36,8 @@ async def run_cleanup_loop() -> None:
     while True:
         try:
             await asyncio.sleep(settings.cleanup_interval_seconds)
-            cleanup_once()
+            # Offload the blocking rmtree/DB work so a sweep never stalls the event loop.
+            await asyncio.to_thread(cleanup_once)
         except asyncio.CancelledError:
             return
         except Exception:  # noqa: BLE001 - a sweep failure must not kill the loop.

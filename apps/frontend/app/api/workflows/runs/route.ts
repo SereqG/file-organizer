@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { BACKEND_URL, getSessionId } from '@/lib/server/session'
+import { BACKEND_URL, backendHeaders, getSessionId } from '@/lib/server/session'
 
 // List the session's run history.
 export async function GET(): Promise<NextResponse> {
@@ -12,7 +12,9 @@ export async function GET(): Promise<NextResponse> {
   }
 
   try {
-    const res = await fetch(`${BACKEND_URL}/workflows/api/runs?session_id=${sessionId}`)
+    const res = await fetch(`${BACKEND_URL}/workflows/api/runs?session_id=${sessionId}`, {
+      headers: await backendHeaders(),
+    })
     const data = await res.json().catch(() => ({}))
     return NextResponse.json(data, { status: res.status })
   } catch {

@@ -16,7 +16,7 @@ export type ExploreState =
   | { phase: 'complete'; tree: FileTreeNode }
   | { phase: 'error'; message: string }
 
-export function useExploreJob(sessionId: string, { autoStart = true, rootPath }: { autoStart?: boolean; rootPath?: string } = {}) {
+export function useExploreJob({ autoStart = true, rootPath }: { autoStart?: boolean; rootPath?: string } = {}) {
   const [state, setState] = useState<ExploreState>({ phase: 'idle' })
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
 
@@ -100,10 +100,11 @@ export function useExploreJob(sessionId: string, { autoStart = true, rootPath }:
 
     let response: Response
     try {
+      // session_id is attached server-side by the /api/explore proxy from the httpOnly cookie.
       response = await fetch('/api/explore', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session_id: sessionId, extended_depth: extendedDepth, root_path: rootPath }),
+        body: JSON.stringify({ extended_depth: extendedDepth, root_path: rootPath }),
       })
     } catch {
       cancelPoll()
@@ -122,7 +123,7 @@ export function useExploreJob(sessionId: string, { autoStart = true, rootPath }:
 
     activeJobIdRef.current = jobId
     timeoutRef.current = setTimeout(() => pollJob(jobId), INITIAL_POLL_MS)
-  }, [sessionId, rootPath, cancelPoll, pollJob, startTicker])
+  }, [rootPath, cancelPoll, pollJob, startTicker])
 
   const acceptPartialTree = useCallback((tree: FileTreeNode) => {
     cancelPoll()

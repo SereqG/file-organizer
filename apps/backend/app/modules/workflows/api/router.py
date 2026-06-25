@@ -1,7 +1,8 @@
 import asyncio
 import json
+import os
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 from typing import Any, Optional
@@ -9,6 +10,7 @@ from typing import Any, Optional
 from app.config import settings
 from app.modules.sandbox.application import session_service
 from app.modules.sandbox.application.containment import confine
+from app.shared.ownership import session_owner_guard
 from app.modules.workflows.application import execution_store
 from app.modules.workflows.application.execute_resumable import start_execution
 from app.modules.workflows.application.execute_workflow import (
@@ -101,6 +103,18 @@ _NODE_LIST_PATH_FIELDS = {
     "copyFile": "targetPaths",
     "copyFolder": "targetPaths",
 }
+# Name fields (not paths): appended to a parent directory, so they must not contain a separator or
+# traversal of their own, or they could escape the sandbox before guard_target's write-time check.
+_NODE_NAME_FIELDS = {
+    "createFolder": "folderName",
+    "renameFolder": "newName",
+    "renameFile": "newName",
+}
+
+
+def _is_unsafe_name(value: str) -> bool:
+    """A name must be a single path segment — no separators, no absolute path, no bare ``.``/``..``."""
+    return os.path.isabs(value) or "/" in value or "\\" in value or value in (".", "..")
 
 
 def _confine_node_paths(session_id: str, workflow: WorkflowRequest) -> Optional[str]:
@@ -110,7 +124,7 @@ def _confine_node_paths(session_id: str, workflow: WorkflowRequest) -> Optional[
         if isinstance(value, str) and value:
             _, error = confine(session_id, value, must_exist=False, must_be_dir=False)
             if error:
-                return f"Node {node_id} references a path outside the sandbox: {value}"
+                return f"Node {node_id} references a path outside the sandbox."
         return None
 
     for node in workflow.nodes:
@@ -125,6 +139,11 @@ def _confine_node_paths(session_id: str, workflow: WorkflowRequest) -> Optional[
                 error = check(value, node.id)
                 if error:
                     return error
+        name_field = _NODE_NAME_FIELDS.get(node.type)
+        if name_field:
+            name = node.config.get(name_field)
+            if isinstance(name, str) and name and _is_unsafe_name(name):
+                return f"Node {node.id} has an invalid name."
     return None
 
 
@@ -295,10 +314,12 @@ async def execute_workflow(body: ExecuteWorkflowRequest):
 
 
 @router.get("/execute/{execution_id}")
-def get_execution(execution_id: str):
+def get_execution(execution_id: str, request: Request):
     state = execution_store.get(execution_id)
     if state is None:
         return JSONResponse(status_code=404, content={"error": "Execution not found."})
+    if (denied := session_owner_guard(request, state.session_id)) is not None:
+        return denied
     return _serialize_state(state)
 
 
@@ -314,10 +335,12 @@ def _serialize_log_entry(e) -> str:
 
 
 @router.get("/execute/{execution_id}/logs")
-async def stream_execution_logs(execution_id: str):
+async def stream_execution_logs(execution_id: str, request: Request):
     state = execution_store.get(execution_id)
     if state is None:
         return JSONResponse(status_code=404, content={"error": "Execution not found."})
+    if (denied := session_owner_guard(request, state.session_id)) is not None:
+        return denied
 
     async def generate():
         cursor = 0
@@ -343,19 +366,23 @@ class ResumeRequest(BaseModel):
 
 
 @router.post("/execute/{execution_id}/resume")
-def resume_execution(execution_id: str, body: ResumeRequest):
+def resume_execution(execution_id: str, body: ResumeRequest, request: Request):
     state = execution_store.get(execution_id)
     if state is None:
         return JSONResponse(status_code=404, content={"error": "Execution not found."})
+    if (denied := session_owner_guard(request, state.session_id)) is not None:
+        return denied
     if not execution_store.resume(state, body.decision):
         return JSONResponse(status_code=409, content={"error": "Execution is not awaiting input."})
     return {"executionId": execution_id, "status": "running"}
 
 
 @router.post("/execute/{execution_id}/cancel")
-def cancel_execution(execution_id: str):
+def cancel_execution(execution_id: str, request: Request):
     state = execution_store.get(execution_id)
     if state is None:
         return JSONResponse(status_code=404, content={"error": "Execution not found."})
+    if (denied := session_owner_guard(request, state.session_id)) is not None:
+        return denied
     execution_store.cancel(state)
     return {"executionId": execution_id, "status": "cancelling"}

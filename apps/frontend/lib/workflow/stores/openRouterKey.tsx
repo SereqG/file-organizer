@@ -2,6 +2,9 @@
 
 import { createContext, useContext, useState, useCallback, type ReactNode } from 'react'
 
+// Accepted, user-owned risk: the OpenRouter key lives in localStorage (readable by client JS) so
+// the demo never stores a secret server-side — bring-your-own-key, removable any time. See
+// ApiKeyInfoModal. No XSS sink exists today (React auto-escapes; no dangerouslySetInnerHTML).
 const KEY_STORAGE = 'file-organizer:openrouter-key'
 const ENABLED_STORAGE = 'file-organizer:openrouter-enabled'
 

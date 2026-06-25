@@ -4,12 +4,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Optional
 
+from app.config import settings
 from app.modules.sandbox.application import session_service
+from app.modules.sandbox.application.session_service import SandboxCapacityError
+from app.rate_limit import limiter
 from app.shared.traversal import FileTreeNode, MAX_DEPTH_HARD, traverse
 
 router = APIRouter(prefix="/sandbox/api", tags=["sandbox"])
@@ -27,8 +30,15 @@ def _session_payload(session: session_service.Session) -> SessionResponse:
 
 
 @router.post("/session", response_model=SessionResponse)
-def create_session():
-    session = session_service.create_session()
+@limiter.limit(settings.session_create_rate_limit)
+def create_session(request: Request):
+    try:
+        session = session_service.create_session()
+    except SandboxCapacityError:
+        return JSONResponse(
+            status_code=503,
+            content={"code": "SANDBOX_CAPACITY", "message": "The demo is at capacity. Try again shortly."},
+        )
     return _session_payload(session)
 
 

@@ -5,8 +5,8 @@ from app.modules.folder_explorer.domain.models import ExploreJob, JobStatus
 _jobs: dict[str, ExploreJob] = {}
 
 
-def create_job(job_id: str) -> ExploreJob:
-    job = ExploreJob(job_id=job_id, status=JobStatus.PENDING)
+def create_job(job_id: str, session_id: str = "") -> ExploreJob:
+    job = ExploreJob(job_id=job_id, status=JobStatus.PENDING, session_id=session_id)
     _jobs[job_id] = job
     return job
 

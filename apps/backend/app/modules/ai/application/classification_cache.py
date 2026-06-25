@@ -9,9 +9,11 @@ In-memory and process-local by design (see the simulation plan). Lost on restart
 """
 
 import threading
+from collections import OrderedDict
 from hashlib import sha256
 from typing import Optional
 
+from app.config import settings
 from app.modules.ai.domain.models import Category
 from app.modules.workflows.domain.models import WorkflowItem
 
@@ -20,7 +22,9 @@ _CACHE_VERSION = 1
 
 _UNIT = "\x1f"  # unit separator — safe field delimiter inside a fingerprint
 
-_scores: dict[tuple[int, str, str, str], float] = {}
+# LRU bounded by settings.classification_cache_max_entries so an attacker varying file names/sizes
+# and category descriptions cannot grow it without bound (it is process-global across sessions).
+_scores: "OrderedDict[tuple[int, str, str, str], float]" = OrderedDict()
 _lock = threading.Lock()
 
 
@@ -56,14 +60,21 @@ def category_fingerprint(category: Category) -> str:
 
 
 def get(model: str, item_fp: str, cat_fp: str) -> Optional[float]:
+    key = (_CACHE_VERSION, model, item_fp, cat_fp)
     with _lock:
-        return _scores.get((_CACHE_VERSION, model, item_fp, cat_fp))
+        if key not in _scores:
+            return None
+        _scores.move_to_end(key)  # mark most-recently used
+        return _scores[key]
 
 
 def put(model: str, item_fp: str, cat_fp: str, confidence: float) -> None:
+    key = (_CACHE_VERSION, model, item_fp, cat_fp)
     with _lock:
-        # TODO: cap with LRU once memory becomes a concern (unbounded by design for now).
-        _scores[(_CACHE_VERSION, model, item_fp, cat_fp)] = confidence
+        _scores[key] = confidence
+        _scores.move_to_end(key)
+        while len(_scores) > settings.classification_cache_max_entries:
+            _scores.popitem(last=False)  # evict least-recently used
 
 
 def clear() -> None:

@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.shared.traversal import FileTreeNode, SkipReason
 
@@ -22,6 +22,9 @@ class JobStatus(str, Enum):
 class ExploreJob(BaseModel):
     job_id: str
     status: JobStatus
+    # Owning session, used for the IDOR check. exclude=True keeps it off the wire so the GET
+    # response never echoes the session id back to the client.
+    session_id: str = Field(default="", exclude=True)
     tree: Optional[FileTreeNode] = None
     requires_confirmation: bool = False
     detected_depth: Optional[int] = None

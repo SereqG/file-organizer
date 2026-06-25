@@ -1,4 +1,4 @@
-const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:8000'
+import { BACKEND_URL, backendHeaders } from '@/lib/server/session'
 
 export async function POST(
   req: Request,
@@ -17,7 +17,7 @@ export async function POST(
   try {
     response = await fetch(`${BACKEND_URL}/workflows/api/execute/${executionId}/resume`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await backendHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(body),
     })
   } catch {

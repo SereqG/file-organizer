@@ -1,4 +1,4 @@
-const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:8000'
+import { BACKEND_URL, backendHeaders } from '@/lib/server/session'
 
 export async function GET(
   _req: Request,
@@ -8,7 +8,9 @@ export async function GET(
 
   let response: Response
   try {
-    response = await fetch(`${BACKEND_URL}/folder_explorer/api/explore/${jobId}`)
+    response = await fetch(`${BACKEND_URL}/folder_explorer/api/explore/${jobId}`, {
+      headers: await backendHeaders(),
+    })
   } catch {
     return Response.json(
       { code: 'NETWORK_ERROR', message: 'Could not reach the server.' },
