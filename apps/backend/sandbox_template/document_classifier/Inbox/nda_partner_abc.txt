@@ -1,0 +1,29 @@
+NON-DISCLOSURE AGREEMENT
+
+This Non-Disclosure Agreement ("Agreement") is entered into as of April 1, 2024,
+by and between ABC Technologies Inc. ("Disclosing Party") and XYZ Solutions Ltd.
+("Receiving Party").
+
+1. CONFIDENTIAL INFORMATION
+The Receiving Party agrees to hold in strict confidence and not to disclose to
+any third party any Confidential Information disclosed by the Disclosing Party.
+"Confidential Information" means any data or information that is proprietary to
+the Disclosing Party and not generally known to the public.
+
+2. OBLIGATIONS
+The Receiving Party shall: (a) protect the Confidential Information using the same
+degree of care it uses to protect its own confidential information; (b) not use
+the Confidential Information for any purpose other than evaluating a potential
+business relationship; (c) limit access to personnel who have a need to know.
+
+3. TERM
+This Agreement shall remain in effect for a period of three (3) years from the
+date of execution.
+
+4. GOVERNING LAW
+This Agreement shall be governed by the laws of the State of Delaware.
+
+Signed:
+___________________________          ___________________________
+ABC Technologies Inc.                XYZ Solutions Ltd.
+Date: April 1, 2024                  Date: April 1, 2024

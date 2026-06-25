@@ -1,0 +1,34 @@
+PARTNERSHIP CONTRACT
+
+This Partnership Contract ("Contract") is entered into on June 15, 2024,
+between Alpha Ventures ("Partner A") and Beta Innovations ("Partner B"),
+collectively referred to as "the Partners."
+
+1. PURPOSE
+The Partners agree to collaborate on the development and commercialization of
+a joint AI-powered data analytics platform ("the Product").
+
+2. CONTRIBUTIONS
+Partner A contributes: Technology IP, development resources (5 engineers),
+and initial seed funding of $200,000.
+Partner B contributes: Market access, sales network, and domain expertise.
+
+3. PROFIT SHARING
+Net profits shall be distributed: 55% to Partner A, 45% to Partner B.
+Losses shall be shared in the same proportion.
+
+4. DECISION MAKING
+Major decisions require unanimous consent. Day-to-day operations are managed
+by a jointly appointed Project Director.
+
+5. DURATION
+This Partnership is effective for 24 months, with option to extend by mutual
+written agreement.
+
+6. DISSOLUTION
+Either party may dissolve the Partnership with 60 days written notice.
+IP developed jointly remains co-owned upon dissolution.
+
+Executed by:
+Alpha Ventures: _______________       Beta Innovations: _______________
+Date: June 15, 2024                   Date: June 15, 2024

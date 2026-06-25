@@ -61,4 +61,13 @@ app.include_router(sandbox_router)
 app.include_router(folder_explorer_router)
 
 if __name__ == "__main__":
-    uvicorn.run("app.main:app", host=settings.host, port=settings.port, reload=settings.debug)
+    # reload_dirs scopes the watcher to source only. Without it the reloader also watches runtime
+    # data (var/sandboxes, logs) under the backend root, so seeding a sandbox's .py files would
+    # restart the worker mid-request and wipe in-memory state (e.g. the explore job store).
+    uvicorn.run(
+        "app.main:app",
+        host=settings.host,
+        port=settings.port,
+        reload=settings.debug,
+        reload_dirs=["app"],
+    )

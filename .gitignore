@@ -1,53 +1,79 @@
-# Python
+# ---------------------------------------------------------------------------
+# Python (backend: FastAPI + uv)
+# ---------------------------------------------------------------------------
 __pycache__/
 *.py[cod]
-*.pyo
-*.pyd
 .venv/
 venv/
+*.egg
 *.egg-info/
+.eggs/
 dist/
 build/
+
+# Type checkers / linters / test caches
 .mypy_cache/
+.dmypy.json
+dmypy.json
 .ruff_cache/
 .pytest_cache/
+
+# Coverage
 .coverage
+coverage.xml
 htmlcov/
 
-# Node.js
+# ---------------------------------------------------------------------------
+# Node.js / Next.js (frontend)
+# ---------------------------------------------------------------------------
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+.eslintcache
+coverage/
 
-# Next.js
+# Next.js build output + generated files
 .next/
 out/
 *.tsbuildinfo
 next-env.d.ts
 
-# Environment
+# ---------------------------------------------------------------------------
+# Environment (never commit real secrets; keep the example template)
+# ---------------------------------------------------------------------------
 .env
 .env.*
 !.env.example
 
-# OS
+# ---------------------------------------------------------------------------
+# OS / editor cruft
+# ---------------------------------------------------------------------------
 .DS_Store
+._*
 Thumbs.db
-
-# IDE
 .idea/
 .vscode/
+*.code-workspace
 *.swp
 *.swo
+*~
 
+# ---------------------------------------------------------------------------
 # Misc
+# ---------------------------------------------------------------------------
 *.pem
 .vercel
 
-# Logs
+# ---------------------------------------------------------------------------
+# Backend runtime data (gitignored on purpose)
+# ---------------------------------------------------------------------------
+# Runtime logs written under apps/backend/logs/. NOTE: scoped to that directory
+# on purpose — do NOT add a global "*.log". The sandbox demo ships fixture log
+# files (e.g. sandbox_template/code_organizer/Project/error.log) that the Code
+# Project Organizer workflow is meant to find and delete.
 apps/backend/logs/
 
-# Sandboxed demo runtime data (per-session sandboxes + SQLite)
+# Per-session sandboxes + the SQLite database (sessions / workflows / run history).
 apps/backend/var/

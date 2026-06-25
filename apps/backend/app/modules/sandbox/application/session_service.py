@@ -16,10 +16,18 @@ from typing import Optional
 from app.config import settings
 from app.modules.sandbox.infrastructure import db
 
-# Source tree copied into every new sandbox (apps/backend/sandbox_template).
-_TEMPLATE_DIR = Path(__file__).resolve().parents[4] / "sandbox_template"
-# Empty destination folders created alongside the seeded Downloads/ tree.
+_SANDBOX_TEMPLATE_ROOT = Path(__file__).resolve().parents[4] / "sandbox_template"
+
+# Default template: Downloads/ with mixed files + empty destination folders.
+_TEMPLATE_DIR = _SANDBOX_TEMPLATE_ROOT
 _EMPTY_FOLDERS = ("Documents", "Photos", "Invoices")
+
+# Named variants for pre-built workflow demos.
+_TEMPLATE_VARIANTS: dict[str, Path] = {
+    "downloads_sorter": _SANDBOX_TEMPLATE_ROOT / "downloads_sorter",
+    "document_classifier": _SANDBOX_TEMPLATE_ROOT / "document_classifier",
+    "code_organizer": _SANDBOX_TEMPLATE_ROOT / "code_organizer",
+}
 
 
 class SandboxCapacityError(Exception):
@@ -52,11 +60,14 @@ def _live_session_count() -> int:
         return conn.execute("SELECT COUNT(*) AS n FROM sessions").fetchone()["n"]
 
 
-def create_session() -> Session:
+def create_session(template_variant: Optional[str] = None) -> Session:
     """Provision a new session: a fresh sandbox dir seeded from the template, plus a DB row.
 
     Enforces the global cap *before* doing any filesystem work, so a creation flood cannot exceed
     ``max_sessions`` between cleanup sweeps. Raises ``SandboxCapacityError`` when full.
+
+    When ``template_variant`` matches a named variant the corresponding pre-built demo tree is used
+    instead of the default template; unknown values fall back to the default silently.
     """
     if _live_session_count() >= settings.max_sessions:
         raise SandboxCapacityError()
@@ -65,12 +76,15 @@ def create_session() -> Session:
     sandbox_path = Path(settings.sandbox_root) / session_id
     sandbox_path.parent.mkdir(parents=True, exist_ok=True)
 
-    if _TEMPLATE_DIR.exists():
-        shutil.copytree(_TEMPLATE_DIR, sandbox_path)
+    template_dir = _TEMPLATE_VARIANTS.get(template_variant or "", _TEMPLATE_DIR)
+    if template_dir.exists():
+        shutil.copytree(template_dir, sandbox_path)
     else:
         sandbox_path.mkdir()
-    for folder in _EMPTY_FOLDERS:
-        (sandbox_path / folder).mkdir(exist_ok=True)
+
+    if template_variant is None:
+        for folder in _EMPTY_FOLDERS:
+            (sandbox_path / folder).mkdir(exist_ok=True)
 
     now = time.time()
     with db.connection() as conn:

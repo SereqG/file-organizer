@@ -1,0 +1,8 @@
+2024-03-10 14:32:11 ERROR pipeline — Connection timeout: database unreachable after 30s
+2024-03-10 14:32:11 ERROR pipeline — Retrying (1/3)…
+2024-03-10 14:32:41 ERROR pipeline — Retrying (2/3)…
+2024-03-10 14:33:11 ERROR pipeline — Max retries exceeded, aborting batch job
+2024-03-11 09:15:03 ERROR api_server — Unhandled exception in /process endpoint
+Traceback: TypeError: Cannot read properties of undefined (reading 'id')
+  at processRecord (utils.ts:42)
+  at async Pipeline.run (index.ts:88)

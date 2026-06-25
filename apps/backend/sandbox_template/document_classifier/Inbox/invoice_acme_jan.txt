@@ -1,0 +1,28 @@
+INVOICE
+
+Invoice Number: INV-2024-0042
+Date: January 15, 2024
+Due Date: February 15, 2024
+
+Bill To:
+Acme Corporation
+123 Business Ave
+New York, NY 10001
+
+From:
+Supplier Ltd.
+456 Commerce St
+San Francisco, CA 94105
+
+Services Rendered:
+- Software development consulting: 40 hours @ $150/hr = $6,000.00
+- Infrastructure setup: $1,200.00
+- Project management: $800.00
+
+Subtotal: $8,000.00
+Tax (8%): $640.00
+Total Due: $8,640.00
+
+Payment Terms: Net 30
+Bank Transfer: IBAN DE89370400440532013000
+Reference: INV-2024-0042

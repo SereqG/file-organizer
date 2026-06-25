@@ -81,7 +81,7 @@ function buildCanvasNodes(def: WorkflowDefinition): AppNode[] {
   return [trigger, ...nodes]
 }
 
-export function useWorkflowEditor() {
+export function useWorkflowEditor(initialWorkflow?: WorkflowDefinition) {
   const [mounted, setMounted] = useState(false)
   const [nodes, setNodes, onNodesChange] = useNodesState<AppNode>([])
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
@@ -323,6 +323,10 @@ export function useWorkflowEditor() {
 
   useEffect(() => {
     setMounted(true)
+    if (initialWorkflow) loadWorkflow(initialWorkflow)
+  // loadWorkflow is stable (useCallback with stable deps); initialWorkflow is intentionally read
+  // only once on mount so the canvas is not reset on every render if the parent re-renders.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return {
