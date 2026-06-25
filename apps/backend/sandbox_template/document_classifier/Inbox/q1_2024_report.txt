@@ -1,0 +1,37 @@
+QUARTERLY BUSINESS REPORT — Q1 2024
+
+Prepared by: Finance & Analytics Department
+Period: January 1, 2024 – March 31, 2024
+Distribution: Executive Team, Board of Directors
+
+EXECUTIVE SUMMARY
+
+Q1 2024 delivered strong performance across all key metrics. Total revenue reached
+$4.2M, representing a 23% year-over-year increase. Operating profit improved to
+$840K (20% margin), up from 16% in Q1 2023.
+
+REVENUE BREAKDOWN
+
+Product Sales:         $2,100,000   (50%)
+Subscription Revenue:  $1,470,000   (35%)
+Professional Services:   $630,000   (15%)
+Total Revenue:         $4,200,000
+
+KEY METRICS
+
+New customers acquired:    342
+Customer churn rate:       2.1% (target: <3%)
+Monthly Recurring Revenue: $490,000
+Net Promoter Score:        67 (up from 58 in Q4 2023)
+
+OPERATIONAL HIGHLIGHTS
+
+- Successfully launched v3.0 of our core platform (March 14)
+- Expanded engineering team from 28 to 35 members
+- Achieved ISO 27001 certification
+- Opened new regional office in Berlin
+
+OUTLOOK Q2 2024
+
+Projected revenue: $4.8M–$5.1M
+Focus areas: enterprise sales expansion, platform scalability

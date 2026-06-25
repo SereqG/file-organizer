@@ -2,10 +2,12 @@
 
 import { useCallback, useState } from 'react'
 import type { FileTreeNode } from '@/lib/types/explore'
+import type { WorkflowDefinition } from '@/lib/types/workflow'
 import { SandboxOnboarding } from './SandboxOnboarding'
 import { WorkflowEditor } from './WorkflowEditor'
 import { ProjectInfoModal } from './ProjectInfoModal'
 import { OpenRouterKeyProvider } from '@/lib/workflow/stores/openRouterKey'
+import { PREBUILT_WORKFLOWS, type PrebuiltWorkflow } from '@/lib/workflow/prebuiltWorkflows'
 
 type WorkspaceState = {
   path: string
@@ -33,16 +35,6 @@ const FEATURES = [
     description:
       'Define deterministic sorting rules by extension, name, size, or date. No AI needed for simple, repeatable tasks.',
   },
-  {
-    title: 'Resumable Execution',
-    description:
-      'Long-running organiser jobs can be paused and resumed. Progress is tracked per session so nothing is lost.',
-  },
-  {
-    title: 'Modular & Extensible',
-    description:
-      'Every node is an independent slice of logic. Add custom nodes or swap providers without touching the rest of the workflow.',
-  },
 ]
 
 function FeatureCard({ title, description }: { title: string; description: string }) {
@@ -57,18 +49,64 @@ function FeatureCard({ title, description }: { title: string; description: strin
   )
 }
 
+function WorkflowCard({
+  workflow,
+  onLoad,
+}: {
+  workflow: PrebuiltWorkflow
+  onLoad: (wf: PrebuiltWorkflow) => void
+}) {
+  return (
+    <div
+      className="flex flex-col rounded-xl border border-white/[0.06] px-5 py-4 transition-colors duration-300 hover:border-orange-500/20 hover:bg-orange-500/[0.03]"
+      style={{ background: 'rgba(255,255,255,0.015)' }}
+    >
+      <div className="mb-3 flex items-start justify-between gap-2">
+        <p className="text-sm font-medium text-white/80">{workflow.name}</p>
+        <div className="flex shrink-0 gap-1.5">
+          <span className="rounded-md bg-white/[0.06] px-2 py-0.5 text-xs text-white/35">
+            {workflow.nodeCount} nodes
+          </span>
+          {workflow.requiresApiKey && (
+            <span className="rounded-md bg-orange-500/10 px-2 py-0.5 text-xs text-orange-400/80">
+              AI
+            </span>
+          )}
+        </div>
+      </div>
+      <p className="mb-4 flex-1 text-xs leading-relaxed text-white/35">{workflow.description}</p>
+      <button
+        onClick={() => onLoad(workflow)}
+        className="w-full cursor-pointer rounded-lg border border-white/[0.08] bg-white/[0.04] py-2 text-xs font-medium text-white/50 transition-colors duration-150 hover:border-white/[0.16] hover:bg-white/[0.08] hover:text-white/70"
+      >
+        Load Workflow →
+      </button>
+    </div>
+  )
+}
+
 function LandingPage({
   onNextStep,
+  onSelectTemplate,
 }: {
   onNextStep: (path: string, tree: FileTreeNode) => void
+  onSelectTemplate: (wf: PrebuiltWorkflow) => void
 }) {
   const [step, setStep] = useState<'intro' | 'setup'>('intro')
   const [formVersion, setFormVersion] = useState(0)
+  const [selectedVariant, setSelectedVariant] = useState<string | undefined>(undefined)
 
   const handleBack = useCallback(() => {
     setStep('intro')
+    setSelectedVariant(undefined)
     setFormVersion(v => v + 1)
   }, [])
+
+  const handleSelectTemplate = useCallback((wf: PrebuiltWorkflow) => {
+    onSelectTemplate(wf)
+    setSelectedVariant(wf.templateVariant)
+    setStep('setup')
+  }, [onSelectTemplate])
 
   return (
     <div className="relative flex w-full flex-col items-center">
@@ -140,9 +178,21 @@ function LandingPage({
               <div className="h-px flex-1 bg-white/[0.06]" />
             </div>
 
-            <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid w-full grid-cols-2 gap-3">
               {FEATURES.map(f => (
                 <FeatureCard key={f.title} title={f.title} description={f.description} />
+              ))}
+            </div>
+
+            <div className="my-10 flex w-full items-center gap-4">
+              <div className="h-px flex-1 bg-white/[0.06]" />
+              <span className="text-xs uppercase tracking-widest text-white/20">Try a Workflow</span>
+              <div className="h-px flex-1 bg-white/[0.06]" />
+            </div>
+
+            <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-3">
+              {PREBUILT_WORKFLOWS.map(wf => (
+                <WorkflowCard key={wf.id} workflow={wf} onLoad={handleSelectTemplate} />
               ))}
             </div>
 
@@ -159,6 +209,7 @@ function LandingPage({
               key={formVersion}
               onNextStep={onNextStep}
               onBack={handleBack}
+              templateVariant={selectedVariant}
             />
           </div>
         )}
@@ -169,20 +220,30 @@ function LandingPage({
 
 export function WorkspaceSection() {
   const [workspace, setWorkspace] = useState<WorkspaceState>(null)
+  const [pendingWorkflow, setPendingWorkflow] = useState<PrebuiltWorkflow | null>(null)
 
   const handleTreeRefresh = useCallback((tree: FileTreeNode) => {
     setWorkspace(w => (w ? { ...w, tree } : w))
   }, [])
 
+  const handleNextStep = useCallback((path: string, tree: FileTreeNode) => {
+    if (pendingWorkflow) {
+      const resolved: WorkflowDefinition = JSON.parse(
+        JSON.stringify(pendingWorkflow.definition).replaceAll('{{workspace}}', path),
+      )
+      setPendingWorkflow(w => (w ? { ...w, definition: resolved } : w))
+    }
+    setWorkspace({ path, tree })
+  }, [pendingWorkflow])
+
   if (workspace !== null) {
-    // The provider wraps WorkflowEditor (not nested inside it) because useWorkflowSimulation runs in
-    // WorkflowEditor's body — above the providers WorkflowEditor renders internally.
     return (
       <OpenRouterKeyProvider>
         <WorkflowEditor
           workspacePath={workspace.path}
           workspaceTree={workspace.tree}
           onTreeRefresh={handleTreeRefresh}
+          initialWorkflow={pendingWorkflow?.definition}
         />
       </OpenRouterKeyProvider>
     )
@@ -190,7 +251,8 @@ export function WorkspaceSection() {
 
   return (
     <LandingPage
-      onNextStep={(path, tree) => setWorkspace({ path, tree })}
+      onNextStep={handleNextStep}
+      onSelectTemplate={setPendingWorkflow}
     />
   )
 }

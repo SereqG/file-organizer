@@ -1,0 +1,7 @@
+2024-03-10 14:30:00 DEBUG pipeline — Starting batch job, batch_size=500
+2024-03-10 14:30:01 DEBUG pipeline — Loaded config from config.json
+2024-03-10 14:30:01 DEBUG database — Connecting to localhost:5432
+2024-03-10 14:30:02 DEBUG database — Connection established, pool_size=10
+2024-03-10 14:30:02 DEBUG pipeline — Processing records 1–500
+2024-03-10 14:30:15 DEBUG pipeline — Checkpoint saved at record 250
+2024-03-10 14:30:28 DEBUG pipeline — Batch 1 complete: 500 records, 2 skipped

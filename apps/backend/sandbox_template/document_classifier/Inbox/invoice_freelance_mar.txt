@@ -1,0 +1,28 @@
+FREELANCE INVOICE
+
+Invoice #: FL-2024-015
+Issue Date: March 20, 2024
+Payment Due: April 3, 2024
+
+From:
+Jane Smith (Freelance Designer)
+jane.smith@design.io
+VAT: DE123456789
+
+To:
+StartupXYZ GmbH
+Startup Street 10
+Berlin, 10115
+
+Work Completed:
+- Brand identity design: $1,800.00
+- Logo variations (x3): $600.00
+- Style guide document: $400.00
+- Revisions (2 rounds): included
+
+Total (excl. VAT): $2,800.00
+VAT 19%: $532.00
+Total Due: $3,332.00
+
+Please transfer to: IBAN AT48 3200 0000 0123 4567
+Reference: FL-2024-015

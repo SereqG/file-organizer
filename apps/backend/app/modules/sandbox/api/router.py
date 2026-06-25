@@ -24,6 +24,10 @@ class SessionResponse(BaseModel):
     tree: Optional[FileTreeNode] = None
 
 
+class CreateSessionBody(BaseModel):
+    template_variant: Optional[str] = None
+
+
 def _session_payload(session: session_service.Session) -> SessionResponse:
     tree = traverse(Path(session.sandbox_path), MAX_DEPTH_HARD)
     return SessionResponse(session_id=session.id, sandbox_path=session.sandbox_path, tree=tree)
@@ -31,9 +35,9 @@ def _session_payload(session: session_service.Session) -> SessionResponse:
 
 @router.post("/session", response_model=SessionResponse)
 @limiter.limit(settings.session_create_rate_limit)
-def create_session(request: Request):
+def create_session(request: Request, body: CreateSessionBody = CreateSessionBody()):
     try:
-        session = session_service.create_session()
+        session = session_service.create_session(template_variant=body.template_variant)
     except SandboxCapacityError:
         return JSONResponse(
             status_code=503,

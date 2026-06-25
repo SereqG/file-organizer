@@ -1,0 +1,27 @@
+INVOICE
+
+Invoice Number: INV-2024-0078
+Date: February 3, 2024
+Due Date: March 3, 2024
+
+Bill To:
+TechCorp Inc.
+789 Innovation Blvd
+Austin, TX 78701
+
+From:
+Digital Services LLC
+321 Tech Park
+Seattle, WA 98101
+
+Description:
+- Monthly SaaS subscription (Enterprise tier): $2,500.00
+- Additional API calls (500k over quota): $250.00
+- Premium support: $500.00
+
+Subtotal: $3,250.00
+Tax (9%): $292.50
+Total Amount Due: $3,542.50
+
+Payment Method: Credit Card on file
+Invoice ID: INV-2024-0078

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { LuCircleAlert } from 'react-icons/lu'
 import type { FileTreeNode } from '@/lib/types/explore'
 import { FolderExplorer } from './FolderExplorer'
@@ -9,6 +9,7 @@ interface SandboxOnboardingProps {
   onNextStep: (path: string, tree: FileTreeNode) => void
   onWorkspaceValidated?: () => void
   onBack?: () => void
+  templateVariant?: string
 }
 
 type State =
@@ -21,13 +22,22 @@ type State =
  * to, via the session cookie) an isolated sandbox, then hands the session to the folder explorer so
  * the visitor picks their workflow root from inside that sandbox — never the real host.
  */
-export function SandboxOnboarding({ onNextStep, onWorkspaceValidated, onBack }: SandboxOnboardingProps) {
+export function SandboxOnboarding({ onNextStep, onWorkspaceValidated, onBack, templateVariant }: SandboxOnboardingProps) {
   const [state, setState] = useState<State>({ phase: 'creating' })
+  // Prevents React StrictMode's double-effect from firing two concurrent session-creation requests.
+  // In StrictMode the cleanup runs before the second effect, but this ref persists across the
+  // simulated unmount/remount, so only the first effect's call goes through.
+  const provisionedRef = useRef(false)
 
   // First statement is an await, so this never calls setState synchronously inside the mount effect.
   const provision = useCallback(async () => {
     try {
-      const res = await fetch('/api/sandbox/session', { method: 'POST' })
+      const res = await fetch('/api/sandbox/session', {
+        method: 'POST',
+        ...(templateVariant
+          ? { body: JSON.stringify({ templateVariant }), headers: { 'Content-Type': 'application/json' } }
+          : {}),
+      })
       if (!res.ok) throw new Error('failed')
       // The session id is intentionally not returned in the body; it lives only in the httpOnly
       // cookie and is attached to backend calls server-side by the proxies.
@@ -36,9 +46,11 @@ export function SandboxOnboarding({ onNextStep, onWorkspaceValidated, onBack }: 
     } catch {
       setState({ phase: 'error' })
     }
-  }, [onWorkspaceValidated])
+  }, [onWorkspaceValidated, templateVariant])
 
   useEffect(() => {
+    if (provisionedRef.current) return
+    provisionedRef.current = true
     void provision()
   }, [provision])
 

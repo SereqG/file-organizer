@@ -38,9 +38,10 @@ interface WorkflowEditorProps {
   workspacePath: string
   workspaceTree: FileTreeNode
   onTreeRefresh: (tree: FileTreeNode) => void
+  initialWorkflow?: WorkflowDefinition
 }
 
-export function WorkflowEditor({ workspacePath, workspaceTree, onTreeRefresh }: WorkflowEditorProps) {
+export function WorkflowEditor({ workspacePath, workspaceTree, onTreeRefresh, initialWorkflow }: WorkflowEditorProps) {
   const [runState, setRunStateRaw] = useState<WorkflowRunState>({ isRunning: false, currentNodeId: null, logEntries: [] })
   const [hasRun, setHasRun] = useState(false)
   const [logsPanelOpen, setLogsPanelOpen] = useState(false)
@@ -116,7 +117,7 @@ export function WorkflowEditor({ workspacePath, workspaceTree, onTreeRefresh }: 
     closeMoveConfig,
     closeCopyConfig,
     closeAiClassifierConfig,
-  } = useWorkflowEditor()
+  } = useWorkflowEditor(initialWorkflow)
 
   const handleRunComplete = useCallback((failedNodes: ExecutionFailedNode[]) => {
     markFailedNodes(failedNodes)

@@ -1,0 +1,30 @@
+SERVICE AGREEMENT
+
+This Service Agreement ("Agreement") is made effective as of May 1, 2024,
+between CloudHost Pro LLC ("Service Provider") and MegaRetail Corp ("Client").
+
+1. SERVICES
+Service Provider agrees to provide the following services to Client:
+- Cloud infrastructure management and monitoring
+- 24/7 technical support (SLA: 99.9% uptime guarantee)
+- Monthly security audits and vulnerability assessments
+- Automated backups and disaster recovery planning
+
+2. COMPENSATION
+Client agrees to pay Service Provider $4,500 per month, invoiced on the 1st
+of each month. Payment is due within 15 days of invoice date.
+
+3. TERM
+This Agreement commences on May 1, 2024, and continues for twelve (12) months,
+automatically renewing unless terminated with 30 days written notice.
+
+4. CONFIDENTIALITY
+Both parties agree to maintain the confidentiality of proprietary information
+shared during the course of this engagement.
+
+5. LIMITATION OF LIABILITY
+Service Provider's liability shall not exceed the fees paid in the preceding
+three months.
+
+Signatures:
+CloudHost Pro LLC: _______________    MegaRetail Corp: _______________

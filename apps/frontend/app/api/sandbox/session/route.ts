@@ -16,9 +16,17 @@ async function reattach(sessionId: string, headers: Record<string, string>): Pro
   }
 }
 
-async function create(headers: Record<string, string>): Promise<SessionData | null> {
+async function create(
+  headers: Record<string, string>,
+  templateVariant?: string,
+): Promise<SessionData | null> {
   try {
-    const res = await fetch(`${BACKEND_URL}/sandbox/api/session`, { method: 'POST', headers })
+    const body = templateVariant ? JSON.stringify({ template_variant: templateVariant }) : undefined
+    const res = await fetch(`${BACKEND_URL}/sandbox/api/session`, {
+      method: 'POST',
+      headers: body ? { ...headers, 'Content-Type': 'application/json' } : headers,
+      body,
+    })
     return res.ok ? ((await res.json()) as SessionData) : null
   } catch {
     return null
@@ -36,7 +44,19 @@ export async function POST(request: Request): Promise<NextResponse> {
   const forwardedFor = request.headers.get('x-forwarded-for') ?? ''
   const headers = await backendHeaders(forwardedFor ? { 'X-Forwarded-For': forwardedFor } : undefined)
 
-  const data = (existing ? await reattach(existing, headers) : null) ?? (await create(headers))
+  let templateVariant: string | undefined
+  try {
+    const body = await request.json()
+    templateVariant = typeof body?.templateVariant === 'string' ? body.templateVariant : undefined
+  } catch {
+    // No body or non-JSON body — proceed without variant.
+  }
+
+  // A specific template variant always creates a fresh session (ignoring any existing cookie) so
+  // the user gets the file set that matches the selected pre-built workflow.
+  const data =
+    (!templateVariant && existing ? await reattach(existing, headers) : null) ??
+    (await create(headers, templateVariant))
   if (data === null) {
     return NextResponse.json(
       { message: 'Could not prepare a sandbox. Make sure the backend is running.' },

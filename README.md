@@ -180,7 +180,9 @@ uv run python -m app.main     # starts on http://localhost:8000
 ```
 
 > 💡 For auto-reload during development, set `DEBUG=true` in `.env`, or run
-> `uv run uvicorn app.main:app --reload --port 8000`.
+> `uv run uvicorn app.main:app --reload --reload-dir app --port 8000`.
+> (`--reload-dir app` keeps the watcher off runtime data under `var/` and `logs/`, whose writes
+> would otherwise restart the worker and drop in-memory state.)
 > Health check: <http://localhost:8000/workflows/api/health>
 
 ### 3️⃣ Frontend
